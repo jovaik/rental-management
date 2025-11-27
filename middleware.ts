@@ -11,7 +11,16 @@ export async function middleware(request: NextRequest) {
   const subdomain = extractSubdomainFromHost(hostname);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/register', '/api/auth', '/api/tenant/current'];
+  const publicRoutes = [
+    '/',
+    '/login',
+    '/register',
+    '/onboarding',
+    '/api/auth',
+    '/api/tenant/current',
+    '/api/tenants/create',
+    '/api/tenants/check-subdomain',
+  ];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   // Get token to check authentication
@@ -21,24 +30,20 @@ export async function middleware(request: NextRequest) {
   });
 
   // Redirect to login if accessing protected route without authentication
-  if (!isPublicRoute && !token && pathname !== '/') {
+  if (!isPublicRoute && !token) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect authenticated users away from login/register pages
-  if (token && (pathname === '/login' || pathname === '/register')) {
+  // Redirect authenticated users away from login/register/onboarding pages
+  if (token && (pathname === '/login' || pathname === '/register' || pathname === '/onboarding')) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // Redirect root to dashboard if authenticated, otherwise to login
-  if (pathname === '/') {
-    if (token) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    } else {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
+  // Redirect root to dashboard if authenticated
+  if (pathname === '/' && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   // Clone the response
