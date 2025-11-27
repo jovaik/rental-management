@@ -144,6 +144,163 @@ async function main() {
 
   console.log('✅ Created sample items for demo tenant');
 
+  // Get all items for demo tenant to create bookings
+  const demoItems = await prisma.item.findMany({
+    where: { tenantId: demoTenant.id },
+    take: 3,
+  });
+
+  // Create sample customers for demo tenant
+  const demoCustomers = await prisma.customer.createMany({
+    data: [
+      {
+        tenantId: demoTenant.id,
+        name: 'John Smith',
+        email: 'john.smith@example.com',
+        phone: '+34 600 111 222',
+        documentType: 'PASSPORT',
+        documentNumber: 'AB123456',
+        address: 'Calle Mayor 10',
+        city: 'Madrid',
+        country: 'Spain',
+      },
+      {
+        tenantId: demoTenant.id,
+        name: 'Maria García',
+        email: 'maria.garcia@example.com',
+        phone: '+34 600 333 444',
+        documentType: 'DNI',
+        documentNumber: '12345678X',
+        address: 'Gran Vía 25',
+        city: 'Madrid',
+        country: 'Spain',
+      },
+      {
+        tenantId: demoTenant.id,
+        name: 'Pierre Dubois',
+        email: 'pierre.dubois@example.com',
+        phone: '+33 6 12 34 56 78',
+        documentType: 'PASSPORT',
+        documentNumber: 'FR987654',
+        address: 'Rue de la Paix 15',
+        city: 'Paris',
+        country: 'France',
+      },
+      {
+        tenantId: demoTenant.id,
+        name: 'Emma Wilson',
+        email: 'emma.wilson@example.com',
+        phone: '+44 7700 900123',
+        documentType: 'DRIVING_LICENSE',
+        documentNumber: 'UK123456789',
+        address: 'Oxford Street 50',
+        city: 'London',
+        country: 'United Kingdom',
+      },
+    ],
+  });
+
+  console.log('✅ Created sample customers for demo tenant');
+
+  // Get customers for creating bookings
+  const customers = await prisma.customer.findMany({
+    where: { tenantId: demoTenant.id },
+  });
+
+  // Create sample bookings for demo tenant
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const nextMonth = new Date(today);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const lastMonth = new Date(today);
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+  if (demoItems.length > 0 && customers.length > 0) {
+    await prisma.booking.createMany({
+      data: [
+        // Completed booking
+        {
+          tenantId: demoTenant.id,
+          itemId: demoItems[0].id,
+          customerId: customers[0].id,
+          startDate: lastMonth,
+          endDate: yesterday,
+          totalPrice: 150.00,
+          deposit: 30.00,
+          status: 'COMPLETED',
+          notes: 'Cliente satisfecho, devolución sin problemas',
+        },
+        // In progress booking
+        {
+          tenantId: demoTenant.id,
+          itemId: demoItems[2].id,
+          customerId: customers[1].id,
+          startDate: yesterday,
+          endDate: nextWeek,
+          totalPrice: 280.00,
+          deposit: 56.00,
+          status: 'IN_PROGRESS',
+          notes: 'Cliente recogió el vehículo a tiempo',
+        },
+        // Confirmed booking for tomorrow
+        {
+          tenantId: demoTenant.id,
+          itemId: demoItems[1].id,
+          customerId: customers[2].id,
+          startDate: tomorrow,
+          endDate: nextWeek,
+          totalPrice: 168.00,
+          deposit: 33.60,
+          status: 'CONFIRMED',
+          notes: 'Cliente francés, comunicación en inglés',
+        },
+        // Pending booking
+        {
+          tenantId: demoTenant.id,
+          itemId: demoItems[0].id,
+          customerId: customers[3].id,
+          startDate: nextWeek,
+          endDate: nextMonth,
+          totalPrice: 750.00,
+          deposit: 150.00,
+          status: 'PENDING',
+          notes: 'Esperando confirmación de pago',
+        },
+        // Cancelled booking
+        {
+          tenantId: demoTenant.id,
+          itemId: demoItems[1].id,
+          customerId: customers[0].id,
+          startDate: today,
+          endDate: nextWeek,
+          totalPrice: 196.00,
+          deposit: 39.20,
+          status: 'CANCELLED',
+          notes: 'Cliente canceló por cambio de planes',
+        },
+        // Another completed booking
+        {
+          tenantId: demoTenant.id,
+          itemId: demoItems[1].id,
+          customerId: customers[2].id,
+          startDate: new Date(today.getTime() - 20 * 24 * 60 * 60 * 1000),
+          endDate: new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000),
+          totalPrice: 140.00,
+          deposit: 28.00,
+          status: 'COMPLETED',
+          notes: 'Excelente experiencia',
+        },
+      ],
+    });
+
+    console.log('✅ Created sample bookings for demo tenant');
+  }
+
   // Create second tenant for testing isolation
   const testTenant = await prisma.tenant.upsert({
     where: { subdomain: 'test' },
@@ -255,6 +412,76 @@ async function main() {
 
   console.log('✅ Created sample items for Scooters Madrid');
 
+  // Get items for Scooters Madrid
+  const scootersMadridItems = await prisma.item.findMany({
+    where: { tenantId: scootersMadridTenant.id },
+  });
+
+  // Create sample customers for Scooters Madrid
+  await prisma.customer.createMany({
+    data: [
+      {
+        tenantId: scootersMadridTenant.id,
+        name: 'Ana Martínez',
+        email: 'ana.martinez@example.com',
+        phone: '+34 600 555 666',
+        documentType: 'DNI',
+        documentNumber: '87654321Y',
+        address: 'Calle Serrano 45',
+        city: 'Madrid',
+        country: 'Spain',
+      },
+      {
+        tenantId: scootersMadridTenant.id,
+        name: 'Luis Fernández',
+        email: 'luis.fernandez@example.com',
+        phone: '+34 600 777 888',
+        documentType: 'NIE',
+        documentNumber: 'X1234567Z',
+        address: 'Plaza España 12',
+        city: 'Madrid',
+        country: 'Spain',
+      },
+    ],
+  });
+
+  console.log('✅ Created sample customers for Scooters Madrid');
+
+  // Get customers for Scooters Madrid
+  const scootersMadridCustomers = await prisma.customer.findMany({
+    where: { tenantId: scootersMadridTenant.id },
+  });
+
+  // Create bookings for Scooters Madrid
+  if (scootersMadridItems.length > 0 && scootersMadridCustomers.length > 0) {
+    await prisma.booking.createMany({
+      data: [
+        {
+          tenantId: scootersMadridTenant.id,
+          itemId: scootersMadridItems[0].id,
+          customerId: scootersMadridCustomers[0].id,
+          startDate: tomorrow,
+          endDate: new Date(tomorrow.getTime() + 3 * 24 * 60 * 60 * 1000),
+          totalPrice: 75.00,
+          deposit: 15.00,
+          status: 'CONFIRMED',
+        },
+        {
+          tenantId: scootersMadridTenant.id,
+          itemId: scootersMadridItems[1].id,
+          customerId: scootersMadridCustomers[1].id,
+          startDate: new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000),
+          endDate: yesterday,
+          totalPrice: 90.00,
+          deposit: 18.00,
+          status: 'COMPLETED',
+        },
+      ],
+    });
+
+    console.log('✅ Created sample bookings for Scooters Madrid');
+  }
+
   // Create "Boats Marbella" tenant
   const boatsMarbellatenant = await prisma.tenant.upsert({
     where: { subdomain: 'boats-marbella' },
@@ -342,6 +569,99 @@ async function main() {
   });
 
   console.log('✅ Created sample items for Boats Marbella');
+
+  // Get items for Boats Marbella
+  const boatsMarbellaItems = await prisma.item.findMany({
+    where: { tenantId: boatsMarbellatenant.id },
+  });
+
+  // Create sample customers for Boats Marbella
+  await prisma.customer.createMany({
+    data: [
+      {
+        tenantId: boatsMarbellatenant.id,
+        name: 'Robert Johnson',
+        email: 'robert.johnson@example.com',
+        phone: '+44 7900 123456',
+        documentType: 'PASSPORT',
+        documentNumber: 'UK789456',
+        address: 'Kings Road 100',
+        city: 'London',
+        country: 'United Kingdom',
+      },
+      {
+        tenantId: boatsMarbellatenant.id,
+        name: 'Hans Mueller',
+        email: 'hans.mueller@example.com',
+        phone: '+49 170 1234567',
+        documentType: 'PASSPORT',
+        documentNumber: 'DE123456',
+        address: 'Hauptstrasse 50',
+        city: 'Munich',
+        country: 'Germany',
+      },
+      {
+        tenantId: boatsMarbellatenant.id,
+        name: 'Sofia Rossi',
+        email: 'sofia.rossi@example.com',
+        phone: '+39 340 1234567',
+        documentType: 'PASSPORT',
+        documentNumber: 'IT654321',
+        address: 'Via Roma 25',
+        city: 'Milan',
+        country: 'Italy',
+      },
+    ],
+  });
+
+  console.log('✅ Created sample customers for Boats Marbella');
+
+  // Get customers for Boats Marbella
+  const boatsMarbellaCustomers = await prisma.customer.findMany({
+    where: { tenantId: boatsMarbellatenant.id },
+  });
+
+  // Create bookings for Boats Marbella
+  if (boatsMarbellaItems.length > 0 && boatsMarbellaCustomers.length > 0) {
+    await prisma.booking.createMany({
+      data: [
+        {
+          tenantId: boatsMarbellatenant.id,
+          itemId: boatsMarbellaItems[0].id,
+          customerId: boatsMarbellaCustomers[0].id,
+          startDate: new Date(tomorrow.getTime() + 5 * 24 * 60 * 60 * 1000),
+          endDate: new Date(tomorrow.getTime() + 8 * 24 * 60 * 60 * 1000),
+          totalPrice: 2400.00,
+          deposit: 480.00,
+          status: 'CONFIRMED',
+          notes: 'Cliente VIP, servicio de catering incluido',
+        },
+        {
+          tenantId: boatsMarbellatenant.id,
+          itemId: boatsMarbellaItems[1].id,
+          customerId: boatsMarbellaCustomers[1].id,
+          startDate: tomorrow,
+          endDate: new Date(tomorrow.getTime() + 2 * 24 * 60 * 60 * 1000),
+          totalPrice: 900.00,
+          deposit: 180.00,
+          status: 'PENDING',
+        },
+        {
+          tenantId: boatsMarbellatenant.id,
+          itemId: boatsMarbellaItems[2].id,
+          customerId: boatsMarbellaCustomers[2].id,
+          startDate: new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000),
+          endDate: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000),
+          totalPrice: 1050.00,
+          deposit: 210.00,
+          status: 'COMPLETED',
+          notes: 'Excelente experiencia, cliente muy satisfecho',
+        },
+      ],
+    });
+
+    console.log('✅ Created sample bookings for Boats Marbella');
+  }
 
   console.log('\n🎉 Seeding completed successfully!');
   console.log('\n📝 Test Credentials:');

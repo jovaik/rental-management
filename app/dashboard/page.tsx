@@ -3,9 +3,9 @@ import { getTenantFromHeaders } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Package, CheckCircle, Wrench, XCircle } from 'lucide-react';
+import { Plus, Package, CheckCircle, Wrench, XCircle, Calendar, TrendingUp, Users } from 'lucide-react';
 import Link from 'next/link';
-import { ItemStatus } from '@prisma/client';
+import { ItemStatus, BookingStatus } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +33,78 @@ export default async function DashboardPage() {
       }),
     ]);
 
+  // Obtener estadísticas de reservas
+  const [totalBookings, pendingBookings, confirmedBookings, inProgressBookings, completedBookings] =
+    await Promise.all([
+      prisma.booking.count({
+        where: { tenantId: tenantId! },
+      }),
+      prisma.booking.count({
+        where: { tenantId: tenantId!, status: BookingStatus.PENDING },
+      }),
+      prisma.booking.count({
+        where: { tenantId: tenantId!, status: BookingStatus.CONFIRMED },
+      }),
+      prisma.booking.count({
+        where: { tenantId: tenantId!, status: BookingStatus.IN_PROGRESS },
+      }),
+      prisma.booking.count({
+        where: { tenantId: tenantId!, status: BookingStatus.COMPLETED },
+      }),
+    ]);
+
+  // Calcular ingresos totales y pendientes
+  const allBookings = await prisma.booking.findMany({
+    where: { tenantId: tenantId! },
+    select: {
+      totalPrice: true,
+      status: true,
+    },
+  });
+
+  const totalRevenue = allBookings
+    .filter((b) => b.status === BookingStatus.COMPLETED)
+    .reduce((sum, b) => sum + b.totalPrice, 0);
+
+  const pendingRevenue = allBookings
+    .filter((b) => [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS].includes(b.status))
+    .reduce((sum, b) => sum + b.totalPrice, 0);
+
+  // Obtener próximas reservas (próximos 7 días)
+  const today = new Date();
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+
+  const upcomingBookings = await prisma.booking.findMany({
+    where: {
+      tenantId: tenantId!,
+      startDate: {
+        gte: today,
+        lte: nextWeek,
+      },
+      status: {
+        notIn: [BookingStatus.CANCELLED, BookingStatus.COMPLETED],
+      },
+    },
+    include: {
+      item: {
+        select: {
+          name: true,
+          photos: true,
+        },
+      },
+      customer: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      startDate: 'asc',
+    },
+    take: 5,
+  });
+
   // Obtener últimos items añadidos
   const recentItems = await prisma.item.findMany({
     where: { tenantId: tenantId! },
@@ -40,7 +112,7 @@ export default async function DashboardPage() {
     take: 5,
   });
 
-  const stats = [
+  const itemStats = [
     {
       title: 'Total Items',
       value: totalItems,
@@ -78,6 +150,63 @@ export default async function DashboardPage() {
     },
   ];
 
+  const bookingStats = [
+    {
+      title: 'Total Reservas',
+      value: totalBookings,
+      icon: Calendar,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+    },
+    {
+      title: 'Pendientes',
+      value: pendingBookings,
+      icon: Calendar,
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+    },
+    {
+      title: 'Confirmadas',
+      value: confirmedBookings,
+      icon: CheckCircle,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      title: 'En Progreso',
+      value: inProgressBookings,
+      icon: TrendingUp,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+    },
+    {
+      title: 'Completadas',
+      value: completedBookings,
+      icon: CheckCircle,
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-50',
+    },
+  ];
+
+  const revenueStats = [
+    {
+      title: 'Ingresos Completados',
+      value: `€${totalRevenue.toFixed(2)}`,
+      icon: TrendingUp,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      isRevenue: true,
+    },
+    {
+      title: 'Ingresos Pendientes',
+      value: `€${pendingRevenue.toFixed(2)}`,
+      icon: Calendar,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      isRevenue: true,
+    },
+  ];
+
   return (
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -97,30 +226,152 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          {stats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={stat.title}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {stat.title}
-                  </CardTitle>
-                  <div className={`${stat.bgColor} p-2 rounded-lg`}>
-                    <Icon className={`h-4 w-4 ${stat.color}`} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                </CardContent>
-              </Card>
-            );
-          })}
+        {/* Items Stats Grid */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Inventario</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {itemStats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={stat.title}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {stat.title}
+                    </CardTitle>
+                    <div className={`${stat.bgColor} p-2 rounded-lg`}>
+                      <Icon className={`h-4 w-4 ${stat.color}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
 
+        {/* Bookings Stats Grid */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Reservas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {bookingStats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={stat.title}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {stat.title}
+                    </CardTitle>
+                    <div className={`${stat.bgColor} p-2 rounded-lg`}>
+                      <Icon className={`h-4 w-4 ${stat.color}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Revenue Stats */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Ingresos</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {revenueStats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={stat.title}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {stat.title}
+                    </CardTitle>
+                    <div className={`${stat.bgColor} p-2 rounded-lg`}>
+                      <Icon className={`h-4 w-4 ${stat.color}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Upcoming Bookings */}
+        {upcomingBookings.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Próximas Reservas (7 días)</CardTitle>
+              <Link href="/bookings">
+                <Button variant="outline" size="sm">
+                  Ver Todas
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {upcomingBookings.map((booking) => {
+                  const formatDate = (date: Date) => {
+                    return new Date(date).toLocaleDateString('es-ES', {
+                      weekday: 'short',
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    });
+                  };
+                  
+                  return (
+                    <div
+                      key={booking.id}
+                      className="flex items-center justify-between border-b border-gray-100 pb-4 last:border-0 last:pb-0"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                          {booking.item.photos && booking.item.photos.length > 0 ? (
+                            <img
+                              src={booking.item.photos[0]}
+                              alt={booking.item.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Calendar className="h-6 w-6 text-gray-400" />
+                          )}
+                        </div>
+                        <div>
+                          <Link
+                            href={`/bookings/${booking.id}`}
+                            className="font-medium text-gray-900 hover:text-blue-600"
+                          >
+                            {booking.item.name}
+                          </Link>
+                          <p className="text-sm text-gray-500">
+                            {booking.customer.name}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">
+                          {formatDate(booking.startDate)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          €{booking.totalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Gestión de Inventario</CardTitle>
@@ -137,6 +388,28 @@ export default async function DashboardPage() {
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
                     Añadir Item
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de Reservas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Crea y gestiona reservas de tus items
+              </p>
+              <div className="flex gap-2">
+                <Link href="/bookings">
+                  <Button variant="outline">Ver Reservas</Button>
+                </Link>
+                <Link href="/bookings/new">
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nueva Reserva
                   </Button>
                 </Link>
               </div>
@@ -162,8 +435,7 @@ export default async function DashboardPage() {
               </div>
               <div className="rounded-md bg-blue-50 p-4">
                 <p className="text-sm text-blue-700">
-                  Sistema multi-tenant funcionando correctamente. Los datos están
-                  aislados por tenant.
+                  Sistema multi-tenant funcionando correctamente.
                 </p>
               </div>
             </CardContent>
