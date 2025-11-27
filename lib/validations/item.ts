@@ -26,7 +26,7 @@ export const itemBaseSchema = z.object({
 
 // Schema para crear item
 export const createItemSchema = itemBaseSchema.extend({
-  attributes: z.record(z.any()).optional(),
+  attributes: z.record(z.string(), z.any()).optional(),
 });
 
 // Schema para actualizar item

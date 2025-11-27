@@ -84,7 +84,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): { subject: string;
             Nombre: ${tenant.name}<br>
             Subdominio: ${tenant.subdomain}<br>
             Ubicación: ${tenant.location || 'No especificada'}<br>
-            Tipo de negocio: ${tenant.businessType}
+            Tipo de negocio: ${tenant.businessTypes?.join(', ') || 'No especificado'}
           </div>
           
           <p>Ahora puedes acceder a tu panel de control y comenzar a gestionar tu inventario, reservas, clientes y facturas.</p>
@@ -125,7 +125,7 @@ Información de tu negocio:
 - Nombre: ${tenant.name}
 - Subdominio: ${tenant.subdomain}
 - Ubicación: ${tenant.location || 'No especificada'}
-- Tipo de negocio: ${tenant.businessType}
+- Tipo de negocio: ${tenant.businessTypes?.join(', ') || 'No especificado'}
 
 Accede a tu panel: ${loginUrl}
 

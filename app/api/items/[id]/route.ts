@@ -21,9 +21,10 @@ const updateItemSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await requireAuth();
     const tenantId = session.user.tenant_id;
 
@@ -36,7 +37,7 @@ export async function GET(
 
     const item = await prisma.item.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId,
       },
     });
@@ -67,9 +68,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await requireAuth();
     const tenantId = session.user.tenant_id;
 
@@ -83,7 +85,7 @@ export async function PUT(
     // Verify item belongs to tenant
     const existingItem = await prisma.item.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId,
       },
     });
@@ -113,7 +115,7 @@ export async function PUT(
 
     // Update item
     const item = await prisma.item.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
     });
 
@@ -127,7 +129,7 @@ export async function PUT(
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation error', details: error.issues },
         { status: 400 }
       );
     }
@@ -145,9 +147,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await requireAuth();
     const tenantId = session.user.tenant_id;
 
@@ -161,7 +164,7 @@ export async function DELETE(
     // Verify item belongs to tenant
     const existingItem = await prisma.item.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId,
       },
       include: {
@@ -186,7 +189,7 @@ export async function DELETE(
 
     // Delete item
     await prisma.item.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({

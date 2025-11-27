@@ -36,9 +36,9 @@ export function VehicleFields({ register, errors, defaultValues }: VehicleFields
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             placeholder="ABC-1234"
           />
-          {errors?.attributes?.licensePlate && (
+          {errors?.attributes && 'licensePlate' in errors.attributes && errors.attributes.licensePlate && (
             <p className="mt-1 text-sm text-red-600">
-              {errors.attributes.licensePlate.message as string}
+              {(errors.attributes.licensePlate as any)?.message as string}
             </p>
           )}
         </div>
@@ -75,9 +75,9 @@ export function VehicleFields({ register, errors, defaultValues }: VehicleFields
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             placeholder="2023"
           />
-          {errors?.attributes?.year && (
+          {errors?.attributes && 'year' in errors.attributes && errors.attributes.year && (
             <p className="mt-1 text-sm text-red-600">
-              {errors.attributes.year.message as string}
+              {(errors.attributes.year as any)?.message as string}
             </p>
           )}
         </div>
@@ -98,9 +98,9 @@ export function VehicleFields({ register, errors, defaultValues }: VehicleFields
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             placeholder="5000"
           />
-          {errors?.attributes?.mileage && (
+          {errors?.attributes && 'mileage' in errors.attributes && errors.attributes.mileage && (
             <p className="mt-1 text-sm text-red-600">
-              {errors.attributes.mileage.message as string}
+              {(errors.attributes.mileage as any)?.message as string}
             </p>
           )}
         </div>

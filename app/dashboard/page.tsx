@@ -12,25 +12,31 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const session = await requireAuth();
-  const tenantId = await getTenantFromHeaders();
+  const tenant = await getTenantFromHeaders();
+  
+  if (!tenant) {
+    return <div>Tenant no encontrado</div>;
+  }
+  
+  const tenantId = tenant.id;
 
   // Obtener estadísticas de items
   const [totalItems, availableItems, rentedItems, maintenanceItems, unavailableItems] =
     await Promise.all([
       prisma.item.count({
-        where: { tenantId: tenantId! },
+        where: { tenantId },
       }),
       prisma.item.count({
-        where: { tenantId: tenantId!, status: ItemStatus.AVAILABLE },
+        where: { tenantId, status: ItemStatus.AVAILABLE },
       }),
       prisma.item.count({
-        where: { tenantId: tenantId!, status: ItemStatus.RENTED },
+        where: { tenantId, status: ItemStatus.RENTED },
       }),
       prisma.item.count({
-        where: { tenantId: tenantId!, status: ItemStatus.MAINTENANCE },
+        where: { tenantId, status: ItemStatus.MAINTENANCE },
       }),
       prisma.item.count({
-        where: { tenantId: tenantId!, status: ItemStatus.UNAVAILABLE },
+        where: { tenantId, status: ItemStatus.UNAVAILABLE },
       }),
     ]);
 
@@ -38,25 +44,25 @@ export default async function DashboardPage() {
   const [totalBookings, pendingBookings, confirmedBookings, inProgressBookings, completedBookings] =
     await Promise.all([
       prisma.booking.count({
-        where: { tenantId: tenantId! },
+        where: { tenantId },
       }),
       prisma.booking.count({
-        where: { tenantId: tenantId!, status: BookingStatus.PENDING },
+        where: { tenantId, status: BookingStatus.PENDING },
       }),
       prisma.booking.count({
-        where: { tenantId: tenantId!, status: BookingStatus.CONFIRMED },
+        where: { tenantId, status: BookingStatus.CONFIRMED },
       }),
       prisma.booking.count({
-        where: { tenantId: tenantId!, status: BookingStatus.IN_PROGRESS },
+        where: { tenantId, status: BookingStatus.IN_PROGRESS },
       }),
       prisma.booking.count({
-        where: { tenantId: tenantId!, status: BookingStatus.COMPLETED },
+        where: { tenantId, status: BookingStatus.COMPLETED },
       }),
     ]);
 
   // Obtener estadísticas de facturas
   const allInvoices = await prisma.invoice.findMany({
-    where: { tenantId: tenantId! },
+    where: { tenantId },
     select: {
       amount: true,
       status: true,
@@ -79,7 +85,7 @@ export default async function DashboardPage() {
 
   // Obtener estadísticas de clientes
   const totalCustomers = await prisma.customer.count({
-    where: { tenantId: tenantId! },
+    where: { tenantId },
   });
 
   // Obtener próximas reservas (próximos 7 días)
@@ -89,7 +95,7 @@ export default async function DashboardPage() {
 
   const upcomingBookings = await prisma.booking.findMany({
     where: {
-      tenantId: tenantId!,
+      tenantId,
       startDate: {
         gte: today,
         lte: nextWeek,
@@ -119,14 +125,14 @@ export default async function DashboardPage() {
 
   // Obtener últimos items añadidos
   const recentItems = await prisma.item.findMany({
-    where: { tenantId: tenantId! },
+    where: { tenantId },
     orderBy: { createdAt: 'desc' },
     take: 5,
   });
 
   // Obtener últimas facturas generadas
   const recentInvoices = await prisma.invoice.findMany({
-    where: { tenantId: tenantId! },
+    where: { tenantId },
     include: {
       booking: {
         include: {

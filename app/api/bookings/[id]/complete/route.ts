@@ -5,9 +5,10 @@ import { requireAuth, getTenantFromSession } from '@/lib/auth';
 // POST /api/bookings/[id]/complete - Complete booking
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await requireAuth();
     const tenantId = await getTenantFromSession();
 
@@ -20,7 +21,7 @@ export async function POST(
 
     const booking = await prisma.booking.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId,
       },
     });
@@ -40,7 +41,7 @@ export async function POST(
     }
 
     const completedBooking = await prisma.booking.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'COMPLETED' },
       include: {
         item: true,

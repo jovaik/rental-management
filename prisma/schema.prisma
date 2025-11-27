@@ -188,7 +188,7 @@ model Invoice {
   id            String        @id @default(cuid())
   tenantId      String
   bookingId     String
-  invoiceNumber String        @unique
+  invoiceNumber String
   amount        Float
   status        InvoiceStatus @default(PENDING)
   pdfUrl        String?
@@ -205,4 +205,5 @@ model Invoice {
   @@index([bookingId])
   @@index([invoiceNumber])
   @@index([status])
+  @@unique([tenantId, invoiceNumber])
 }

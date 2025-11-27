@@ -14,9 +14,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await requireAuth();
     const tenantId = await getTenantFromSession();
-    const { id } = await params;
 
     if (!tenantId) {
       return NextResponse.json(
@@ -63,9 +63,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await requireAuth();
     const tenantId = await getTenantFromSession();
-    const { id } = await params;
 
     if (!tenantId) {
       return NextResponse.json(
@@ -113,7 +113,7 @@ export async function PUT(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Datos inválidos', details: error.errors },
+        { error: 'Datos inválidos', details: error.issues },
         { status: 400 }
       );
     }

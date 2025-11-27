@@ -679,38 +679,66 @@ async function main() {
 
   console.log(`📋 Found ${allBookings.length} bookings to invoice`);
 
-  for (const booking of allBookings) {
-    // Generate invoice number
-    const year = new Date(booking.createdAt).getFullYear();
-    const count = await prisma.invoice.count({
-      where: {
-        tenantId: booking.tenantId,
-        createdAt: {
-          gte: new Date(`${year}-01-01`),
-          lt: new Date(`${year + 1}-01-01`),
+  // Group bookings by tenant to generate sequential invoice numbers
+  const bookingsByTenant = allBookings.reduce((acc, booking) => {
+    if (!acc[booking.tenantId]) {
+      acc[booking.tenantId] = [];
+    }
+    acc[booking.tenantId].push(booking);
+    return acc;
+  }, {} as Record<string, typeof allBookings>);
+
+  // Keep track of invoice numbers per tenant per year
+  const invoiceCounters: Record<string, Record<number, number>> = {};
+
+  for (const [tenantId, tenantBookings] of Object.entries(bookingsByTenant)) {
+    // Initialize counters for this tenant
+    if (!invoiceCounters[tenantId]) {
+      invoiceCounters[tenantId] = {};
+    }
+
+    for (let i = 0; i < tenantBookings.length; i++) {
+      const booking = tenantBookings[i];
+      const year = new Date(booking.createdAt).getFullYear();
+      
+      // Initialize counter for this year if not exists
+      if (!invoiceCounters[tenantId][year]) {
+        // Get existing count from database
+        const existingCount = await prisma.invoice.count({
+          where: {
+            tenantId: booking.tenantId,
+            createdAt: {
+              gte: new Date(`${year}-01-01`),
+              lt: new Date(`${year + 1}-01-01`),
+            },
+          },
+        });
+        invoiceCounters[tenantId][year] = existingCount;
+      }
+      
+      // Increment counter and generate invoice number
+      invoiceCounters[tenantId][year]++;
+      const nextNumber = invoiceCounters[tenantId][year];
+      const invoiceNumber = `INV-${year}-${String(nextNumber).padStart(4, '0')}`;
+
+      // Determine invoice status based on booking status
+      const invoiceStatus = booking.status === 'COMPLETED' ? 'PAID' : 'PENDING';
+      const paidAt = booking.status === 'COMPLETED' ? booking.updatedAt : null;
+
+      await prisma.invoice.create({
+        data: {
+          tenantId: booking.tenantId,
+          bookingId: booking.id,
+          invoiceNumber,
+          amount: booking.totalPrice,
+          status: invoiceStatus,
+          dueDate: new Date(booking.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from creation
+          paidAt: paidAt,
         },
-      },
-    });
-    const nextNumber = count + 1;
-    const invoiceNumber = `INV-${year}-${String(nextNumber).padStart(4, '0')}`;
+      });
 
-    // Determine invoice status based on booking status
-    const invoiceStatus = booking.status === 'COMPLETED' ? 'PAID' : 'PENDING';
-    const paidAt = booking.status === 'COMPLETED' ? booking.updatedAt : null;
-
-    await prisma.invoice.create({
-      data: {
-        tenantId: booking.tenantId,
-        bookingId: booking.id,
-        invoiceNumber,
-        amount: booking.totalPrice,
-        status: invoiceStatus,
-        dueDate: new Date(booking.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from creation
-        paidAt: paidAt,
-      },
-    });
-
-    console.log(`   ✓ Created invoice ${invoiceNumber} for booking`);
+      console.log(`   ✓ Created invoice ${invoiceNumber} for booking from tenant ${tenantId}`);
+    }
   }
 
   console.log('✅ Invoices generated successfully');

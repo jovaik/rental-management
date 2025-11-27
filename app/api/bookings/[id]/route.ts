@@ -17,9 +17,10 @@ const updateBookingSchema = z.object({
 // GET /api/bookings/[id] - Get booking by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await requireAuth();
     const tenantId = await getTenantFromSession();
 
@@ -32,7 +33,7 @@ export async function GET(
 
     const booking = await prisma.booking.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId,
       },
       include: {
@@ -79,9 +80,10 @@ export async function GET(
 // PUT /api/bookings/[id] - Update booking
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await requireAuth();
     const tenantId = await getTenantFromSession();
 
@@ -98,7 +100,7 @@ export async function PUT(
     // Verify booking exists and belongs to tenant
     const existingBooking = await prisma.booking.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId,
       },
     });
@@ -131,7 +133,7 @@ export async function PUT(
       const overlappingBookings = await prisma.booking.findMany({
         where: {
           itemId,
-          id: { not: params.id }, // Exclude current booking
+          id: { not: id }, // Exclude current booking
           status: {
             notIn: ['CANCELLED', 'COMPLETED'],
           },
@@ -167,7 +169,7 @@ export async function PUT(
     if (data.status) updateData.status = data.status;
 
     const booking = await prisma.booking.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         item: true,
@@ -179,7 +181,7 @@ export async function PUT(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Datos inválidos', details: error.errors },
+        { error: 'Datos inválidos', details: error.issues },
         { status: 400 }
       );
     }
@@ -194,9 +196,10 @@ export async function PUT(
 // DELETE /api/bookings/[id] - Cancel booking
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await requireAuth();
     const tenantId = await getTenantFromSession();
 
@@ -209,7 +212,7 @@ export async function DELETE(
 
     const booking = await prisma.booking.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId,
       },
     });
@@ -223,7 +226,7 @@ export async function DELETE(
 
     // Cancel booking instead of deleting
     const cancelledBooking = await prisma.booking.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'CANCELLED' },
     });
 

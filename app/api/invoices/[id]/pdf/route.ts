@@ -11,9 +11,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await requireAuth();
     const tenantId = await getTenantFromSession();
-    const { id } = await params;
 
     if (!tenantId) {
       return NextResponse.json(
