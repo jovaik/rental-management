@@ -24,6 +24,12 @@ Complete billing system with automatic invoice generation:
 
 📖 **Full documentation**: See [CUSTOMERS_INVOICES_MODULE.md](./CUSTOMERS_INVOICES_MODULE.md)
 
+### Optional Integrations
+- ⚙️ **AWS S3 Storage** - Cloud-based file storage with CDN support (ready to enable)
+- 📧 **SMTP Email** - Transactional emails for bookings and welcome messages (ready to enable)
+  - Welcome email on tenant registration
+  - Booking confirmation with PDF invoice attachment
+
 ## 🏗️ Architecture
 
 ### Multi-Tenant Design
@@ -55,44 +61,84 @@ npm install
 
 ### 2. Configure Environment Variables
 
-Copy `.env.example` to `.env` and update the values:
+Copy `.env.example` to `.env` and update the required values:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
-```
+**Required variables:**
+```bash
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key"
+NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
+NODE_ENV="development"
 ```
 
-### 3. Run Database Migrations
+**Optional integrations:**
+
+#### AWS S3 (Cloud Storage)
+For production file uploads, configure S3:
+```bash
+AWS_REGION="us-east-1"
+AWS_ACCESS_KEY_ID="your-access-key"
+AWS_SECRET_ACCESS_KEY="your-secret-key"
+AWS_S3_BUCKET="your-bucket-name"
+AWS_CLOUDFRONT_DOMAIN="your-cdn-domain"  # Optional
+```
+
+Then:
+1. Install SDK: `npm install @aws-sdk/client-s3`
+2. Uncomment S3 code in `/app/api/upload/route.ts`
+
+#### SMTP Email (Transactional Emails)
+For sending booking confirmations and welcome emails:
+```bash
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASSWORD="your-app-password"
+SMTP_FROM_EMAIL="noreply@yourdomain.com"
+SMTP_FROM_NAME="Rental Management"
+```
+
+Then:
+1. Install Nodemailer: `npm install nodemailer`
+2. Install types: `npm install -D @types/nodemailer`
+
+See `.env.example` for provider-specific examples (Gmail, SendGrid, AWS SES).
+
+### 3. Database Setup
+
+Run migrations and seed data:
 
 ```bash
+# Run database migrations
 npx prisma migrate dev
-```
 
-### 4. Generate Prisma Client
-
-```bash
+# Generate Prisma Client
 npx prisma generate
+
+# Seed database with demo data (optional)
+npm run db:seed
 ```
 
-### 5. Seed Database (Optional)
-
-```bash
-npm run seed
-```
-
-### 6. Start Development Server
+### 4. Start Development Server
 
 ```bash
 npm run dev
 ```
 
 Visit `http://localhost:3000`
+
+### 5. Test with Demo Data
+
+If you seeded the database, you can login with:
+- **Subdomain**: `demo`
+- **Email**: `owner@demo.com`
+- **Password**: `password123`
+
+See [SETUP.md](./SETUP.md) for detailed setup instructions including local subdomain testing.
 
 ## 📁 Project Structure
 

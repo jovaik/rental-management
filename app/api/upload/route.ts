@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+// import { getS3Client, buildS3Key, getS3Url, s3Config } from '@/lib/aws-config';
+// import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 // Configuration
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
