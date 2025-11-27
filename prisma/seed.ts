@@ -68,6 +68,82 @@ async function main() {
 
   console.log('✅ Created operator user:', operatorUser.email);
 
+  // Create sample items for demo tenant
+  await prisma.item.createMany({
+    data: [
+      {
+        tenantId: demoTenant.id,
+        type: 'VEHICLE',
+        name: 'Honda PCX 125',
+        description: 'Comfortable and reliable scooter for city tours',
+        basePrice: 30.00,
+        status: 'AVAILABLE',
+        attributes: {
+          licensePlate: '1234-ABC',
+          model: 'Honda PCX 125',
+          year: 2023,
+          mileage: 5000,
+          fuelType: 'gasoline',
+          transmission: 'automatic',
+        },
+        photos: ['https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400'],
+      },
+      {
+        tenantId: demoTenant.id,
+        type: 'VEHICLE',
+        name: 'Yamaha NMAX 125',
+        description: 'Sporty and efficient scooter with modern design',
+        basePrice: 28.00,
+        status: 'AVAILABLE',
+        attributes: {
+          licensePlate: '5678-DEF',
+          model: 'Yamaha NMAX 125',
+          year: 2023,
+          mileage: 3500,
+          fuelType: 'gasoline',
+          transmission: 'automatic',
+        },
+        photos: ['https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400'],
+      },
+      {
+        tenantId: demoTenant.id,
+        type: 'VEHICLE',
+        name: 'Vespa Primavera 150',
+        description: 'Classic Italian style meets modern performance',
+        basePrice: 35.00,
+        status: 'RENTED',
+        attributes: {
+          licensePlate: '9012-GHI',
+          model: 'Vespa Primavera 150',
+          year: 2022,
+          mileage: 8000,
+          fuelType: 'gasoline',
+          transmission: 'automatic',
+        },
+        photos: ['https://images.unsplash.com/photo-1558981852-426c6c22a060?w=400'],
+      },
+      {
+        tenantId: demoTenant.id,
+        type: 'VEHICLE',
+        name: 'Piaggio Liberty 125',
+        description: 'Lightweight and easy to ride, perfect for beginners',
+        basePrice: 25.00,
+        status: 'MAINTENANCE',
+        attributes: {
+          licensePlate: '3456-JKL',
+          model: 'Piaggio Liberty 125',
+          year: 2021,
+          mileage: 12000,
+          fuelType: 'gasoline',
+          transmission: 'automatic',
+        },
+        photos: ['https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400'],
+      },
+    ],
+  });
+
+  console.log('✅ Created sample items for demo tenant');
+
   // Create second tenant for testing isolation
   const testTenant = await prisma.tenant.upsert({
     where: { subdomain: 'test' },
@@ -148,9 +224,12 @@ async function main() {
         basePrice: 25.00,
         status: 'AVAILABLE',
         attributes: {
+          licensePlate: 'MAD-E001',
           model: 'Xiaomi Mi Pro 2',
-          battery: '12.8 Ah',
-          maxSpeed: '25 km/h',
+          year: 2023,
+          mileage: 150,
+          fuelType: 'electric',
+          transmission: 'automatic',
         },
         photos: ['https://images.unsplash.com/photo-1598986646512-9330bcc4c0dc?w=400'],
       },
@@ -162,9 +241,12 @@ async function main() {
         basePrice: 18.00,
         status: 'AVAILABLE',
         attributes: {
+          licensePlate: 'MAD-E002',
           model: 'Segway Ninebot E22',
-          battery: '5.1 Ah',
-          maxSpeed: '20 km/h',
+          year: 2023,
+          mileage: 220,
+          fuelType: 'electric',
+          transmission: 'automatic',
         },
         photos: ['https://images.unsplash.com/photo-1559564484-e48c1b8d69f8?w=400'],
       },
