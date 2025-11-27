@@ -1,14 +1,47 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const url = request.nextUrl;
+  const pathname = url.pathname;
 
   // Extract subdomain
   const subdomain = extractSubdomainFromHost(hostname);
 
-  // Clone the URL to modify it
+  // Public routes that don't require authentication
+  const publicRoutes = ['/login', '/register', '/api/auth', '/api/tenant/current'];
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+
+  // Get token to check authentication
+  const token = await getToken({ 
+    req: request, 
+    secret: process.env.NEXTAUTH_SECRET 
+  });
+
+  // Redirect to login if accessing protected route without authentication
+  if (!isPublicRoute && !token && pathname !== '/') {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Redirect authenticated users away from login/register pages
+  if (token && (pathname === '/login' || pathname === '/register')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // Redirect root to dashboard if authenticated, otherwise to login
+  if (pathname === '/') {
+    if (token) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    } else {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
+  // Clone the response
   const response = NextResponse.next();
 
   // Add subdomain to headers for use in API routes and pages

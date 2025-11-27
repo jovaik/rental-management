@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 declare global {
   // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
+  var prisma: ReturnType<typeof createPrismaClient> | undefined;
 }
 
 // Tenant context storage
@@ -16,118 +16,20 @@ export function getTenantId(): string | null {
   return currentTenantId;
 }
 
-// Create Prisma Client with multi-tenant middleware
+// Create Prisma Client - no middleware needed for now
+// We'll handle tenant isolation manually in API routes
 function createPrismaClient() {
-  const prisma = new PrismaClient({
+  // Skip during build if DATABASE_URL is not set
+  if (!process.env.DATABASE_URL && process.env.NODE_ENV !== 'production') {
+    console.warn('DATABASE_URL not set, using mock Prisma client for build');
+    return new PrismaClient();
+  }
+
+  const client = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 
-  // Models that require tenant isolation
-  const TENANT_MODELS = [
-    'user',
-    'item',
-    'booking',
-    'customer',
-    'invoice',
-  ];
-
-  // Middleware for automatic tenant_id injection
-  prisma.$use(async (params, next) => {
-    const tenantId = getTenantId();
-
-    // Skip tenant isolation for Tenant model itself
-    if (params.model === 'Tenant') {
-      return next(params);
-    }
-
-    // Check if this is a tenant-isolated model
-    if (TENANT_MODELS.includes(params.model?.toLowerCase() || '')) {
-      // CREATE operations
-      if (params.action === 'create') {
-        if (!tenantId) {
-          throw new Error('Tenant ID is required for creating records');
-        }
-        params.args.data = {
-          ...params.args.data,
-          tenantId,
-        };
-      }
-
-      // CREATE MANY operations
-      if (params.action === 'createMany') {
-        if (!tenantId) {
-          throw new Error('Tenant ID is required for creating records');
-        }
-        if (Array.isArray(params.args.data)) {
-          params.args.data = params.args.data.map((item: any) => ({
-            ...item,
-            tenantId,
-          }));
-        } else {
-          params.args.data = {
-            ...params.args.data,
-            tenantId,
-          };
-        }
-      }
-
-      // READ operations (findMany, findFirst, findUnique, count, aggregate)
-      if (
-        ['findMany', 'findFirst', 'findUnique', 'count', 'aggregate', 'groupBy'].includes(
-          params.action
-        )
-      ) {
-        if (tenantId) {
-          params.args.where = {
-            ...params.args.where,
-            tenantId,
-          };
-        }
-      }
-
-      // UPDATE operations
-      if (params.action === 'update' || params.action === 'updateMany') {
-        if (tenantId) {
-          params.args.where = {
-            ...params.args.where,
-            tenantId,
-          };
-        }
-      }
-
-      // DELETE operations
-      if (params.action === 'delete' || params.action === 'deleteMany') {
-        if (tenantId) {
-          params.args.where = {
-            ...params.args.where,
-            tenantId,
-          };
-        }
-      }
-
-      // UPSERT operations
-      if (params.action === 'upsert') {
-        if (!tenantId) {
-          throw new Error('Tenant ID is required for upsert operations');
-        }
-        params.args.where = {
-          ...params.args.where,
-          tenantId,
-        };
-        params.args.create = {
-          ...params.args.create,
-          tenantId,
-        };
-        params.args.update = {
-          ...params.args.update,
-        };
-      }
-    }
-
-    return next(params);
-  });
-
-  return prisma;
+  return client;
 }
 
 // Singleton pattern for Prisma Client

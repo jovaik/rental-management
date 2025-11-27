@@ -62,14 +62,22 @@ export async function getTenantById(id: string): Promise<Tenant | null> {
 export async function createTenant(data: {
   name: string;
   subdomain: string;
-  businessTypes: string[];
+  businessTypes: Array<'SCOOTER_RENTAL' | 'VEHICLE_RENTAL' | 'PROPERTY_RENTAL' | 'BOAT_RENTAL' | 'EXPERIENCE_RENTAL' | 'EQUIPMENT_RENTAL'>;
   location?: string;
   logo?: string;
   colors?: any;
   config?: any;
 }) {
   return prisma.tenant.create({
-    data,
+    data: {
+      name: data.name,
+      subdomain: data.subdomain,
+      businessTypes: data.businessTypes,
+      location: data.location,
+      logo: data.logo,
+      colors: data.colors,
+      config: data.config,
+    },
   });
 }
 
