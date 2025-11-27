@@ -2,6 +2,28 @@
 
 A powerful multi-tenant SaaS platform for managing rental businesses including vehicles, properties, boats, experiences, and equipment.
 
+## ✨ Implemented Modules
+
+### Core Modules
+- ✅ **Multi-tenant System** - Subdomain-based tenant isolation
+- ✅ **Authentication** - NextAuth.js with multi-tenant support
+- ✅ **Onboarding** - Multi-step tenant registration wizard
+- ✅ **Inventory Management** - Full CRUD for rental items
+- ✅ **Booking System** - Calendar-based reservations with availability checks
+- ✅ **Customer Management** - Complete CRM functionality
+- ✅ **Invoice Management** - Automatic invoice generation with PDF export
+- ✅ **Dashboard** - Real-time business metrics and financial analytics
+
+### Latest: Customer & Invoice Management (MVP)
+Complete billing system with automatic invoice generation:
+- Customer database with search and filtering
+- Automatic invoice creation on booking confirmation
+- PDF generation with professional design
+- Financial dashboard with revenue metrics
+- Status management (Pending, Paid, Cancelled)
+
+📖 **Full documentation**: See [CUSTOMERS_INVOICES_MODULE.md](./CUSTOMERS_INVOICES_MODULE.md)
+
 ## 🏗️ Architecture
 
 ### Multi-Tenant Design

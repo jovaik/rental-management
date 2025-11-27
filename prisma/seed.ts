@@ -663,6 +663,58 @@ async function main() {
     console.log('✅ Created sample bookings for Boats Marbella');
   }
 
+  // Generate invoices for all confirmed and completed bookings
+  console.log('\n💵 Generating invoices for confirmed and completed bookings...');
+  
+  const allBookings = await prisma.booking.findMany({
+    where: {
+      status: {
+        in: ['CONFIRMED', 'COMPLETED'],
+      },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  console.log(`📋 Found ${allBookings.length} bookings to invoice`);
+
+  for (const booking of allBookings) {
+    // Generate invoice number
+    const year = new Date(booking.createdAt).getFullYear();
+    const count = await prisma.invoice.count({
+      where: {
+        tenantId: booking.tenantId,
+        createdAt: {
+          gte: new Date(`${year}-01-01`),
+          lt: new Date(`${year + 1}-01-01`),
+        },
+      },
+    });
+    const nextNumber = count + 1;
+    const invoiceNumber = `INV-${year}-${String(nextNumber).padStart(4, '0')}`;
+
+    // Determine invoice status based on booking status
+    const invoiceStatus = booking.status === 'COMPLETED' ? 'PAID' : 'PENDING';
+    const paidAt = booking.status === 'COMPLETED' ? booking.updatedAt : null;
+
+    await prisma.invoice.create({
+      data: {
+        tenantId: booking.tenantId,
+        bookingId: booking.id,
+        invoiceNumber,
+        amount: booking.totalPrice,
+        status: invoiceStatus,
+        dueDate: new Date(booking.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from creation
+        paidAt: paidAt,
+      },
+    });
+
+    console.log(`   ✓ Created invoice ${invoiceNumber} for booking`);
+  }
+
+  console.log('✅ Invoices generated successfully');
+
   console.log('\n🎉 Seeding completed successfully!');
   console.log('\n📝 Test Credentials:');
   console.log('   Demo Tenant (subdomain: demo):');

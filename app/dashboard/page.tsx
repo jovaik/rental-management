@@ -3,9 +3,10 @@ import { getTenantFromHeaders } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Package, CheckCircle, Wrench, XCircle, Calendar, TrendingUp, Users } from 'lucide-react';
+import { Plus, Package, CheckCircle, Wrench, XCircle, Calendar, TrendingUp, Users, DollarSign, FileText } from 'lucide-react';
 import Link from 'next/link';
-import { ItemStatus, BookingStatus } from '@prisma/client';
+import { ItemStatus, BookingStatus, InvoiceStatus } from '@prisma/client';
+import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,22 +54,33 @@ export default async function DashboardPage() {
       }),
     ]);
 
-  // Calcular ingresos totales y pendientes
-  const allBookings = await prisma.booking.findMany({
+  // Obtener estadísticas de facturas
+  const allInvoices = await prisma.invoice.findMany({
     where: { tenantId: tenantId! },
     select: {
-      totalPrice: true,
+      amount: true,
       status: true,
     },
   });
 
-  const totalRevenue = allBookings
-    .filter((b) => b.status === BookingStatus.COMPLETED)
-    .reduce((sum, b) => sum + b.totalPrice, 0);
+  const totalInvoices = allInvoices.length;
+  const paidInvoices = allInvoices.filter((i) => i.status === InvoiceStatus.PAID).length;
+  const pendingInvoices = allInvoices.filter((i) => i.status === InvoiceStatus.PENDING).length;
 
-  const pendingRevenue = allBookings
-    .filter((b) => [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS].includes(b.status))
-    .reduce((sum, b) => sum + b.totalPrice, 0);
+  const totalRevenue = allInvoices
+    .filter((i) => i.status === InvoiceStatus.PAID)
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const pendingRevenue = allInvoices
+    .filter((i) => i.status === InvoiceStatus.PENDING)
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const totalAmount = allInvoices.reduce((sum, i) => sum + i.amount, 0);
+
+  // Obtener estadísticas de clientes
+  const totalCustomers = await prisma.customer.count({
+    where: { tenantId: tenantId! },
+  });
 
   // Obtener próximas reservas (próximos 7 días)
   const today = new Date();
@@ -108,6 +120,29 @@ export default async function DashboardPage() {
   // Obtener últimos items añadidos
   const recentItems = await prisma.item.findMany({
     where: { tenantId: tenantId! },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+  });
+
+  // Obtener últimas facturas generadas
+  const recentInvoices = await prisma.invoice.findMany({
+    where: { tenantId: tenantId! },
+    include: {
+      booking: {
+        include: {
+          customer: {
+            select: {
+              name: true,
+            },
+          },
+          item: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
     orderBy: { createdAt: 'desc' },
     take: 5,
   });
@@ -190,20 +225,39 @@ export default async function DashboardPage() {
 
   const revenueStats = [
     {
-      title: 'Ingresos Completados',
+      title: 'Ingresos Totales',
+      value: `€${totalAmount.toFixed(2)}`,
+      icon: DollarSign,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      isRevenue: true,
+      subtitle: `${totalInvoices} facturas`,
+    },
+    {
+      title: 'Ingresos Pagados',
       value: `€${totalRevenue.toFixed(2)}`,
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       isRevenue: true,
+      subtitle: `${paidInvoices} facturas`,
     },
     {
       title: 'Ingresos Pendientes',
       value: `€${pendingRevenue.toFixed(2)}`,
       icon: Calendar,
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+      isRevenue: true,
+      subtitle: `${pendingInvoices} facturas`,
+    },
+    {
+      title: 'Total Clientes',
+      value: totalCustomers,
+      icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      isRevenue: true,
+      isRevenue: false,
     },
   ];
 
@@ -278,8 +332,8 @@ export default async function DashboardPage() {
 
         {/* Revenue Stats */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Ingresos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h2 className="text-xl font-semibold mb-4">Finanzas y Clientes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {revenueStats.map((stat) => {
               const Icon = stat.icon;
               return (
@@ -294,6 +348,11 @@ export default async function DashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{stat.value}</div>
+                    {stat.subtitle && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {stat.subtitle}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -370,24 +429,85 @@ export default async function DashboardPage() {
           </Card>
         )}
 
+        {/* Recent Invoices */}
+        {recentInvoices.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Últimas Facturas Generadas</CardTitle>
+              <Link href="/invoices">
+                <Button variant="outline" size="sm">
+                  Ver Todas
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentInvoices.map((invoice) => (
+                  <div
+                    key={invoice.id}
+                    className="flex items-center justify-between border-b border-gray-100 pb-4 last:border-0 last:pb-0"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
+                        invoice.status === InvoiceStatus.PAID
+                          ? 'bg-green-50'
+                          : invoice.status === InvoiceStatus.PENDING
+                          ? 'bg-yellow-50'
+                          : 'bg-gray-50'
+                      }`}>
+                        <FileText className={`h-6 w-6 ${
+                          invoice.status === InvoiceStatus.PAID
+                            ? 'text-green-600'
+                            : invoice.status === InvoiceStatus.PENDING
+                            ? 'text-yellow-600'
+                            : 'text-gray-400'
+                        }`} />
+                      </div>
+                      <div>
+                        <Link
+                          href={`/invoices/${invoice.id}`}
+                          className="font-medium text-gray-900 hover:text-blue-600"
+                        >
+                          {invoice.invoiceNumber}
+                        </Link>
+                        <p className="text-sm text-gray-500">
+                          {invoice.booking.customer.name} - {invoice.booking.item.name}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">
+                        €{invoice.amount.toFixed(2)}
+                      </p>
+                      <div className="mt-1">
+                        <InvoiceStatusBadge status={invoice.status} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Gestión de Inventario</CardTitle>
+              <CardTitle>Inventario</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600">
-                Gestiona tu inventario de items de forma eficiente
+                Gestiona tu inventario de items
               </p>
               <div className="flex gap-2">
                 <Link href="/items">
-                  <Button variant="outline">Ver Items</Button>
+                  <Button variant="outline" size="sm">Ver Items</Button>
                 </Link>
                 <Link href="/items/new">
-                  <Button>
+                  <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
-                    Añadir Item
+                    Añadir
                   </Button>
                 </Link>
               </div>
@@ -396,20 +516,20 @@ export default async function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Gestión de Reservas</CardTitle>
+              <CardTitle>Reservas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600">
-                Crea y gestiona reservas de tus items
+                Crea y gestiona reservas
               </p>
               <div className="flex gap-2">
                 <Link href="/bookings">
-                  <Button variant="outline">Ver Reservas</Button>
+                  <Button variant="outline" size="sm">Ver Reservas</Button>
                 </Link>
                 <Link href="/bookings/new">
-                  <Button>
+                  <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
-                    Nueva Reserva
+                    Nueva
                   </Button>
                 </Link>
               </div>
@@ -418,25 +538,38 @@ export default async function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Información del Sistema</CardTitle>
+              <CardTitle>Clientes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-gray-600">Rol:</span>{' '}
-                  <strong>{session.user.role}</strong>
-                </div>
-                <div>
-                  <span className="text-gray-600">Tenant ID:</span>{' '}
-                  <strong className="font-mono text-xs">
-                    {session.user.tenant_id}
-                  </strong>
-                </div>
+              <p className="text-sm text-gray-600">
+                Gestiona tu base de clientes
+              </p>
+              <div className="flex gap-2">
+                <Link href="/customers">
+                  <Button variant="outline" size="sm">Ver Clientes</Button>
+                </Link>
+                <Link href="/customers/new">
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Añadir
+                  </Button>
+                </Link>
               </div>
-              <div className="rounded-md bg-blue-50 p-4">
-                <p className="text-sm text-blue-700">
-                  Sistema multi-tenant funcionando correctamente.
-                </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Facturas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Gestiona tus facturas
+              </p>
+              <div className="flex gap-2">
+                <Link href="/invoices">
+                  <Button variant="outline" size="sm">Ver Facturas</Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
