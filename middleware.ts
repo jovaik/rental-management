@@ -1,95 +1,129 @@
+import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 
-export async function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host') || '';
-  const url = request.nextUrl;
-  const pathname = url.pathname;
+// Define routes and their required roles
+const PROTECTED_ROUTES: Record<string, string[]> = {
+  '/users': ['super_admin'],
+  '/settings': ['super_admin'],
+  '/vehicles': ['super_admin', 'admin', 'propietario', 'colaborador', 'operador', 'taller'],
+  '/pricing': ['super_admin', 'admin'],
+  '/maintenance': ['super_admin', 'admin', 'technician', 'taller', 'propietario', 'colaborador'],
+  '/spare-parts': ['super_admin', 'admin', 'taller'],
+  '/locations': ['super_admin', 'admin'],
+  '/reports': ['super_admin', 'admin', 'propietario', 'colaborador'],
+  '/customers': ['super_admin', 'admin', 'operador'],
+  '/expenses': ['super_admin', 'admin', 'propietario', 'colaborador'],
+  '/documents': ['super_admin', 'admin', 'propietario', 'colaborador'],
+  '/notifications': ['super_admin', 'admin', 'operador'],
+  '/commissions': ['super_admin', 'admin', 'propietario', 'colaborador'],
+  '/planning': ['super_admin', 'admin', 'operador'],
+  '/calendar': ['super_admin', 'admin', 'operador'],
+  '/bookings': ['super_admin', 'admin', 'operador'],
+};
 
-  // Extract subdomain
-  const subdomain = extractSubdomainFromHost(hostname);
-
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/register',
-    '/onboarding',
-    '/api/auth',
-    '/api/tenant/current',
-    '/api/tenants/create',
-    '/api/tenants/check-subdomain',
-  ];
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
-
-  // Get token to check authentication
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.NEXTAUTH_SECRET 
-  });
-
-  // Redirect to login if accessing protected route without authentication
-  if (!isPublicRoute && !token) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
+/**
+ * Extracts tenant subdomain from the request
+ * Priority: 
+ * 1. Query parameter ?tenant=xxx
+ * 2. Subdomain (e.g., demo.example.com)
+ * 3. Environment variable DEFAULT_TENANT_SUBDOMAIN
+ * 4. Fallback to "demo"
+ */
+function getTenantSubdomain(req: NextRequest): string {
+  // Check query parameter
+  const tenantParam = req.nextUrl.searchParams.get('tenant');
+  if (tenantParam) {
+    return tenantParam;
   }
 
-  // Redirect authenticated users away from login/register/onboarding pages
-  if (token && (pathname === '/login' || pathname === '/register' || pathname === '/onboarding')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Check subdomain
+  const hostname = req.headers.get('host') || '';
+  const parts = hostname.split('.');
+  
+  // If we have a subdomain (e.g., demo.example.com or demo.vercel.app)
+  // and it's not www, use it
+  if (parts.length >= 3 && parts[0] !== 'www') {
+    // Check if it's not a Vercel preview deployment URL
+    if (!hostname.includes('vercel.app') || !hostname.includes('-')) {
+      return parts[0];
+    }
   }
 
-  // Redirect root to dashboard if authenticated
-  if (pathname === '/' && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  // Clone the response
-  const response = NextResponse.next();
-
-  // Add subdomain to headers for use in API routes and pages
-  if (subdomain) {
-    response.headers.set('x-tenant-subdomain', subdomain);
-  }
-
-  // Add full hostname to headers
-  response.headers.set('x-hostname', hostname);
-
-  return response;
+  // Use environment variable or fallback to "demo"
+  return process.env.DEFAULT_TENANT_SUBDOMAIN || 'demo';
 }
 
-function extractSubdomainFromHost(hostname: string): string | null {
-  // Remove port if present
-  const host = hostname.split(':')[0];
+// Middleware for public routes (login, API auth, etc.)
+export function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  
+  // Set tenant subdomain header for all requests
+  const tenantSubdomain = getTenantSubdomain(request);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-tenant-subdomain', tenantSubdomain);
 
-  // Split by dots
-  const parts = host.split('.');
-
-  // If localhost or IP, no subdomain
-  if (host === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
-    return null;
+  // For public routes like /login and /api/auth, just add the header
+  if (pathname.startsWith('/api/auth') || pathname === '/login' || pathname === '/' || pathname.startsWith('/onboarding')) {
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
-  // If we have at least 3 parts (subdomain.domain.tld), return the first part
-  if (parts.length >= 3) {
-    return parts[0];
-  }
+  // For protected routes, use withAuth
+  return withAuth(
+    function middleware(req) {
+      const token = req.nextauth.token;
+      const pathname = req.nextUrl.pathname;
 
-  return null;
+      // Check if the route requires role-based access
+      for (const [route, allowedRoles] of Object.entries(PROTECTED_ROUTES)) {
+        if (pathname.startsWith(route)) {
+          const userRole = token?.role as string;
+          if (!allowedRoles.includes(userRole)) {
+            // Redirect to unauthorized page
+            return NextResponse.redirect(new URL('/unauthorized', req.url));
+          }
+        }
+      }
+
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    },
+    {
+      callbacks: {
+        authorized: ({ token }) => !!token,
+      },
+    }
+  )(request, {} as any);
 }
 
-// Configure which routes should be processed by middleware
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+    '/api/auth/:path*',
+    '/login',
+    '/onboarding',
+    '/dashboard/:path*',
+    '/vehicles/:path*',
+    '/pricing/:path*',
+    '/bookings/:path*',
+    '/maintenance/:path*',
+    '/spare-parts/:path*',
+    '/locations/:path*',
+    '/reports/:path*',
+    '/customers/:path*',
+    '/expenses/:path*',
+    '/documents/:path*',
+    '/notifications/:path*',
+    '/commissions/:path*',
+    '/planning/:path*',
+    '/calendar/:path*',
+    '/users/:path*',
+    '/settings/:path*',
   ],
 };
