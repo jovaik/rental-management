@@ -73,7 +73,7 @@ export function middleware(request: NextRequest) {
   }
 
   // For protected routes, use withAuth
-  return withAuth(
+  return (withAuth(
     function middleware(req) {
       const token = req.nextauth.token;
       const pathname = req.nextUrl.pathname;
@@ -100,7 +100,7 @@ export function middleware(request: NextRequest) {
         authorized: ({ token }) => !!token,
       },
     }
-  )(request, {} as any);
+  ) as any)(request as any, {} as any);
 }
 
 export const config = {
