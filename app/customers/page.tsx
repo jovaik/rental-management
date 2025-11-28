@@ -14,7 +14,7 @@ export default async function CustomersPage() {
     where: { tenantId },
     include: {
       _count: {
-        select: { bookings: true },
+        select: { Booking: true },
       },
     },
     orderBy: {

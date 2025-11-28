@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 type BookingWithRelations = Booking & {
-  item: {
+  Item: {
     id: string;
     name: string;
     type: string;
@@ -13,7 +13,7 @@ type BookingWithRelations = Booking & {
     photos: string[];
     attributes: any;
   };
-  customer: {
+  Customer: {
     id: string;
     name: string;
     email: string;
@@ -156,22 +156,22 @@ export default function BookingCard({ booking, onUpdate }: BookingCardProps) {
         <div>
           <h3 className="text-lg font-semibold mb-3">Item Reservado</h3>
           <div className="flex items-start space-x-4 bg-gray-50 p-4 rounded-lg">
-            {booking.item.photos[0] && (
+            {booking.Item.photos[0] && (
               <img
-                src={booking.item.photos[0]}
-                alt={booking.item.name}
+                src={booking.Item.photos[0]}
+                alt={booking.Item.name}
                 className="w-24 h-24 object-cover rounded-lg"
               />
             )}
             <div className="flex-1">
               <Link
-                href={`/items/${booking.item.id}`}
+                href={`/items/${booking.Item.id}`}
                 className="text-lg font-semibold text-blue-600 hover:text-blue-800"
               >
-                {booking.item.name}
+                {booking.Item.name}
               </Link>
               <p className="text-sm text-gray-600 mt-1">
-                Tipo: {booking.item.type} | Precio Base: €{booking.item.basePrice}/día
+                Tipo: {booking.Item.type} | Precio Base: €{booking.Item.basePrice}/día
               </p>
             </div>
           </div>
@@ -183,20 +183,20 @@ export default function BookingCard({ booking, onUpdate }: BookingCardProps) {
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between">
               <span className="text-gray-600">Nombre:</span>
-              <span className="font-medium">{booking.customer.name}</span>
+              <span className="font-medium">{booking.Customer.name}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Email:</span>
-              <span className="font-medium">{booking.customer.email}</span>
+              <span className="font-medium">{booking.Customer.email}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Teléfono:</span>
-              <span className="font-medium">{booking.customer.phone}</span>
+              <span className="font-medium">{booking.Customer.phone}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Documento:</span>
               <span className="font-medium">
-                {booking.customer.documentType} - {booking.customer.documentNumber}
+                {booking.Customer.documentType} - {booking.Customer.documentNumber}
               </span>
             </div>
           </div>
@@ -227,7 +227,7 @@ export default function BookingCard({ booking, onUpdate }: BookingCardProps) {
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between">
               <span className="text-gray-600">Precio por Día:</span>
-              <span className="font-medium">€{booking.item.basePrice.toFixed(2)}</span>
+              <span className="font-medium">€{booking.Item.basePrice.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Número de Días:</span>

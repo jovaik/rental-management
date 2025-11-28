@@ -38,9 +38,9 @@ export async function GET(
         tenantId,
       },
       include: {
-        bookings: {
+        Booking: {
           include: {
-            item: {
+            Item: {
               select: {
                 id: true,
                 name: true,
@@ -174,7 +174,7 @@ export async function DELETE(
       },
       include: {
         _count: {
-          select: { bookings: true },
+          select: { Booking: true },
         },
       },
     });
@@ -187,7 +187,7 @@ export async function DELETE(
     }
 
     // Check if customer has bookings
-    if (customer._count.bookings > 0) {
+    if (customer._count.Booking > 0) {
       return NextResponse.json(
         { error: 'No se puede eliminar un cliente con reservas existentes' },
         { status: 400 }

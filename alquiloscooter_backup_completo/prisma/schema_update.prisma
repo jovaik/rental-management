@@ -1,0 +1,43 @@
+// Añadir al schema.prisma - Sistema de Tarifas por Rangos
+
+model CarRentalPricingGroups {
+  id                      Int                             @id @default(autoincrement()) @map("id")
+  name                    String                          @unique @map("name")
+  description             String?                         @map("description") @db.Text
+  vehicle_category        String                          @map("vehicle_category")
+  
+  // Tarifas por rangos de días
+  price_1_3_days          Decimal                         @map("price_1_3_days") @db.Decimal(10, 2)
+  price_4_7_days          Decimal                         @map("price_4_7_days") @db.Decimal(10, 2)
+  price_8_plus_days       Decimal                         @map("price_8_plus_days") @db.Decimal(10, 2)
+  
+  // Suscripciones mensuales/anuales
+  price_monthly           Decimal?                        @map("price_monthly") @db.Decimal(10, 2)
+  price_annual            Decimal?                        @map("price_annual") @db.Decimal(10, 2)
+  
+  // Temporadas
+  high_season_multiplier  Decimal?                        @default(1.0) @map("high_season_multiplier") @db.Decimal(4, 2)
+  low_season_multiplier   Decimal?                        @default(1.0) @map("low_season_multiplier") @db.Decimal(4, 2)
+  min_months_subscription Int?                            @default(1) @map("min_months_subscription")
+  
+  // Otros cargos
+  insurance_per_day       Decimal?                        @default(0) @map("insurance_per_day") @db.Decimal(10, 2)
+  deposit_amount          Decimal?                        @default(0) @map("deposit_amount") @db.Decimal(10, 2)
+  extra_km_charge         Decimal?                        @default(0) @map("extra_km_charge") @db.Decimal(10, 2)
+  included_km_per_day     Int?                            @default(0) @map("included_km_per_day")
+  
+  status                  String                          @default("active") @map("status")
+  created_at              DateTime                        @default(now()) @map("created_at")
+  updated_at              DateTime?                       @updatedAt @map("updated_at")
+
+  // Relación con vehículos
+  vehicles                CarRentalCars[]                 @relation("VehiclePricingGroup")
+
+  @@map("car_rental_pricing_groups")
+}
+
+// Añadir campo en CarRentalCars
+model CarRentalCars {
+  pricing_group_id        Int?                            @map("pricing_group_id")
+  pricingGroup            CarRentalPricingGroups?         @relation("VehiclePricingGroup", fields: [pricing_group_id], references: [id])
+}

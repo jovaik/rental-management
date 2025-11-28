@@ -44,8 +44,8 @@ export async function POST(
       where: { id: id },
       data: { status: 'IN_PROGRESS' },
       include: {
-        item: true,
-        customer: true,
+        Item: true,
+        Customer: true,
       },
     });
 

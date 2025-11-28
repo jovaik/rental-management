@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       // Create tenant
       const tenant = await tx.tenant.create({
         data: {
+          id: crypto.randomUUID(),
           name: data.companyName,
           subdomain: data.subdomain,
           businessTypes: [data.businessType],
@@ -106,18 +107,21 @@ export async function POST(request: NextRequest) {
                 publishToMarbella4Rent: true,
               }
             : undefined,
+          updatedAt: new Date(),
         },
       });
 
       // Create admin user
       const user = await tx.user.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: tenant.id,
           email: data.adminEmail,
           name: data.adminName,
           password: hashedPassword,
           role: UserRole.OWNER,
           isActive: true,
+          updatedAt: new Date(),
         },
       });
 

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const bookings = await prisma.booking.findMany({
       where: { tenantId },
       include: {
-        item: true,
+        Item: true,
       },
     });
 
@@ -56,13 +56,13 @@ export async function GET(request: NextRequest) {
         },
       },
       include: {
-        item: {
+        Item: {
           select: {
             name: true,
             type: true,
           },
         },
-        customer: {
+        Customer: {
           select: {
             name: true,
           },

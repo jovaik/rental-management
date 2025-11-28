@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const overlappingBookings = await prisma.booking.findMany({
       where,
       include: {
-        customer: {
+        Customer: {
           select: {
             name: true,
           },

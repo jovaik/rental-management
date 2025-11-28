@@ -1,0 +1,91 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    /* Naranja corporativo principal - HSL(16, 100%, 60%) = #FF6B35 aproximadamente */
+    --primary: 16 100% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Acento naranja más claro para hover */
+    --accent: 16 100% 96%;
+    --accent-foreground: 16 100% 40%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    /* Ring color naranja para focus */
+    --ring: 16 100% 60%;
+    --radius: 0.5rem;
+    /* Color corporativo adicional para elementos específicos */
+    --corporate: 16 100% 60%;
+    --corporate-hover: 16 100% 55%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    /* Naranja corporativo para modo oscuro */
+    --primary: 16 100% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 16 100% 20%;
+    --accent-foreground: 16 100% 70%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 16 100% 65%;
+    --corporate: 16 100% 65%;
+    --corporate-hover: 16 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Prevent body scroll when mobile menu is open */
+  .mobile-menu-open {
+    @apply overflow-hidden lg:overflow-auto;
+  }
+  
+  /* Smooth transitions for sidebar */
+  .sidebar-transition {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Ensure proper z-index stacking */
+  .sidebar-overlay {
+    @apply fixed inset-0 bg-black/50 z-40 lg:hidden;
+  }
+  
+  .sidebar-panel {
+    @apply fixed lg:static inset-y-0 left-0 z-50 bg-white border-r;
+  }
+}

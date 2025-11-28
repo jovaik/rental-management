@@ -70,6 +70,7 @@ export async function createTenant(data: {
 }) {
   return prisma.tenant.create({
     data: {
+      id: crypto.randomUUID(),
       name: data.name,
       subdomain: data.subdomain,
       businessTypes: data.businessTypes,
@@ -77,6 +78,7 @@ export async function createTenant(data: {
       logo: data.logo,
       colors: data.colors,
       config: data.config,
+      updatedAt: new Date(),
     },
   });
 }

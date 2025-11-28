@@ -11,7 +11,7 @@ interface Booking {
   endDate: string;
   totalPrice: number;
   status: string;
-  item: {
+  Item: {
     id: string;
     name: string;
     type: string;
@@ -31,7 +31,7 @@ interface Customer {
   country?: string;
   notes?: string;
   createdAt: string;
-  bookings: Booking[];
+  Booking: Booking[];
 }
 
 interface CustomerCardProps {
@@ -145,7 +145,7 @@ export function CustomerCard({ customer }: CustomerCardProps) {
               <Calendar className="w-5 h-5 text-gray-400" />
               <div>
                 <div className="text-sm text-gray-600">Total Reservas</div>
-                <div className="font-medium">{customer.bookings.length}</div>
+                <div className="font-medium">{customer.Booking.length}</div>
               </div>
             </div>
           </div>
@@ -163,11 +163,11 @@ export function CustomerCard({ customer }: CustomerCardProps) {
       {/* Booking History */}
       <div className="bg-white p-6 rounded-lg border">
         <h2 className="text-lg font-semibold mb-4">Historial de Reservas</h2>
-        {customer.bookings.length === 0 ? (
+        {customer.Booking.length === 0 ? (
           <p className="text-gray-600">No hay reservas registradas</p>
         ) : (
           <div className="space-y-4">
-            {customer.bookings.map((booking) => (
+            {customer.Booking.map((booking) => (
               <Link
                 key={booking.id}
                 href={`/bookings/${booking.id}`}
@@ -175,15 +175,15 @@ export function CustomerCard({ customer }: CustomerCardProps) {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex gap-4">
-                    {booking.item.photos[0] && (
+                    {booking.Item.photos[0] && (
                       <img
-                        src={booking.item.photos[0]}
-                        alt={booking.item.name}
+                        src={booking.Item.photos[0]}
+                        alt={booking.Item.name}
                         className="w-16 h-16 rounded object-cover"
                       />
                     )}
                     <div>
-                      <div className="font-medium">{booking.item.name}</div>
+                      <div className="font-medium">{booking.Item.name}</div>
                       <div className="text-sm text-gray-600">
                         {format(new Date(booking.startDate), 'PPP', { locale: es })} -{' '}
                         {format(new Date(booking.endDate), 'PPP', { locale: es })}

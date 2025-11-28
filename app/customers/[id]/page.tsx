@@ -24,9 +24,9 @@ export default async function CustomerDetailPage({
       tenantId,
     },
     include: {
-      bookings: {
+      Booking: {
         include: {
-          item: {
+          Item: {
             select: {
               id: true,
               name: true,
@@ -55,7 +55,7 @@ export default async function CustomerDetailPage({
     country: customer.country || undefined,
     notes: customer.notes || undefined,
     createdAt: customer.createdAt.toISOString(),
-    bookings: customer.bookings.map(booking => ({
+    Booking: customer.Booking.map(booking => ({
       ...booking,
       startDate: booking.startDate.toISOString(),
       endDate: booking.endDate.toISOString(),

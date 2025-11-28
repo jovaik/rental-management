@@ -37,7 +37,7 @@ export async function GET(
         tenantId,
       },
       include: {
-        item: {
+        Item: {
           select: {
             id: true,
             name: true,
@@ -47,7 +47,7 @@ export async function GET(
             attributes: true,
           },
         },
-        customer: {
+        Customer: {
           select: {
             id: true,
             name: true,
@@ -172,8 +172,8 @@ export async function PUT(
       where: { id },
       data: updateData,
       include: {
-        item: true,
-        customer: true,
+        Item: true,
+        Customer: true,
       },
     });
 

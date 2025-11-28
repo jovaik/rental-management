@@ -29,13 +29,13 @@ export async function GET(
         tenantId,
       },
       include: {
-        booking: {
+        Booking: {
           include: {
-            customer: true,
-            item: true,
+            Customer: true,
+            Item: true,
           },
         },
-        tenant: true,
+        Tenant: true,
       },
     });
 
@@ -56,31 +56,31 @@ export async function GET(
         dueDate: invoice.dueDate,
       },
       booking: {
-        startDate: invoice.booking.startDate,
-        endDate: invoice.booking.endDate,
-        totalPrice: invoice.booking.totalPrice,
-        deposit: invoice.booking.deposit,
-        notes: invoice.booking.notes,
+        startDate: invoice.Booking.startDate,
+        endDate: invoice.Booking.endDate,
+        totalPrice: invoice.Booking.totalPrice,
+        deposit: invoice.Booking.deposit,
+        notes: invoice.Booking.notes,
         item: {
-          name: invoice.booking.item.name,
-          type: invoice.booking.item.type,
-          basePrice: invoice.booking.item.basePrice,
+          name: invoice.Booking.Item.name,
+          type: invoice.Booking.Item.type,
+          basePrice: invoice.Booking.Item.basePrice,
         },
       },
       customer: {
-        name: invoice.booking.customer.name,
-        email: invoice.booking.customer.email,
-        phone: invoice.booking.customer.phone,
-        documentType: invoice.booking.customer.documentType,
-        documentNumber: invoice.booking.customer.documentNumber,
-        address: invoice.booking.customer.address,
-        city: invoice.booking.customer.city,
-        country: invoice.booking.customer.country,
+        name: invoice.Booking.Customer.name,
+        email: invoice.Booking.Customer.email,
+        phone: invoice.Booking.Customer.phone,
+        documentType: invoice.Booking.Customer.documentType,
+        documentNumber: invoice.Booking.Customer.documentNumber,
+        address: invoice.Booking.Customer.address,
+        city: invoice.Booking.Customer.city,
+        country: invoice.Booking.Customer.country,
       },
       tenant: {
-        name: invoice.tenant.name,
-        location: invoice.tenant.location,
-        logo: invoice.tenant.logo,
+        name: invoice.Tenant.name,
+        location: invoice.Tenant.location,
+        logo: invoice.Tenant.logo,
       },
     });
 

@@ -1,0 +1,1491 @@
+// Prisma schema for Car Rental Management System
+// PHPJabbers + NextJS Hybrid System
+
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/rental_management_app/app/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// CATÁLOGO DE FOTOS POR MODELO
+// ==========================================
+model VehicleModelPhotos {
+  id                    Int       @id @default(autoincrement())
+  make                  String    @map("make")                    // Marca: PIAGGIO
+  model                 String    @map("model")                   // Modelo: LIBERTY 125
+  photo_url             String    @map("photo_url")               // URL de la foto en S3
+  photo_order           Int       @default(0) @map("photo_order") // Orden de visualización
+  is_primary            Boolean   @default(false) @map("is_primary") // Foto principal
+  created_at            DateTime  @default(now()) @map("created_at")
+  created_by            Int?      @map("created_by")              // Usuario que subió la foto
+  
+  // Index para búsquedas rápidas por marca+modelo
+  @@unique([make, model, photo_order], map: "unique_model_photo_order")
+  @@index([make, model], map: "idx_make_model")
+  @@map("vehicle_model_photos")
+}
+
+// Existing PHPJabbers Tables (Referenced)
+model CarRentalUsers {
+  id                Int                          @id @default(autoincrement()) @map("id")
+  email             String                       @unique @map("email")
+  password          String                       @map("password")
+  salt              String?                      @map("salt")
+  username          String?                      @map("username")
+  firstname         String?                      @map("firstname")
+  lastname          String?                      @map("lastname")
+  phone             String?                      @map("phone")
+  status            UserStatus?                  @default(T) @map("status")
+  role              String?                      @default("user") @map("role")
+  created           DateTime?                    @default(now()) @map("created")
+  modified          DateTime?                    @map("modified")
+  
+  // Sistema de Afiliados/Colaboradores
+  referral_code     String?                      @unique @map("referral_code") // Código único de afiliado (ej: JUAN123)
+  referral_enabled  Boolean                      @default(false) @map("referral_enabled") // Si está habilitado como afiliado
+  
+  // Relationships with extended tables
+  createdMaintenance    CarRentalVehicleMaintenance[] @relation("MaintenanceCreator")
+  calendarEvents        CarRentalCalendarEvents[]    @relation("CalendarCreator")
+  assignedEvents        CarRentalCalendarEvents[]    @relation("CalendarAssigned")
+  vehicleHistory        CarRentalVehicleHistory[]
+  uploadedDocuments     CarRentalVehicleDocuments[]
+  notifications         CarRentalNotifications[]
+  pickupBookings        CarRentalBookings[]          @relation("PickupStaff")
+  returnBookings        CarRentalBookings[]          @relation("ReturnStaff")
+  ownedVehicles         CarRentalCars[]              @relation("VehicleOwner")
+  depositedVehicles     CarRentalCars[]              @relation("VehicleDepositor")
+  inspections           VehicleInspections[]
+  locations             BusinessLocations[]          @relation("LocationUser")
+  referredBookings      CarRentalBookings[]          @relation("ReferredBookings") // Reservas referidas por este usuario
+  affiliateProfile      AffiliateProfile?            @relation("AffiliateUser") // Perfil completo de afiliado (1:1)
+
+  @@map("car_rental_users")
+}
+
+model CarRentalLocations {
+  id               Int                      @id @default(autoincrement()) @map("id")
+  name             String?                  @map("name")
+  address          String?                  @map("address")
+  phone            String?                  @map("phone")
+  email            String?                  @map("email")
+  status           UserStatus?              @default(T) @map("status")
+  
+  // Relationships
+  cars             CarRentalCars[]
+  calendarEvents   CarRentalCalendarEvents[]
+
+  @@map("car_rental_locations")
+}
+
+// Business Locations - Sistema de ubicaciones de negocio
+model BusinessLocations {
+  id                Int                               @id @default(autoincrement()) @map("id")
+  name              String                            @map("name")
+  type              String                            @default("office") @map("type")  // office, workshop, depot, client, other
+  address           String?                           @map("address")
+  city              String?                           @map("city")
+  postal_code       String?                           @map("postal_code")
+  country           String?                           @default("España") @map("country")
+  contact_person    String?                           @map("contact_person")
+  contact_phone     String?                           @map("contact_phone")
+  contact_email     String?                           @map("contact_email")
+  user_id           Int?                              @map("user_id")  // Usuario asociado (para talleres)
+  notes             String?                           @map("notes") @db.Text
+  active            Boolean                           @default(true) @map("active")
+  is_public_pickup_point Boolean                      @default(false) @map("is_public_pickup_point")  // Si es punto de recogida/devolución público
+  created_at        DateTime                          @default(now()) @map("created_at")
+  updated_at        DateTime                          @updatedAt @map("updated_at")
+  
+  // Relationships
+  user              CarRentalUsers?                   @relation("LocationUser", fields: [user_id], references: [id])
+  vehicles          CarRentalCars[]                   @relation("VehicleBusinessLocation")
+  maintenanceRecords CarRentalVehicleMaintenance[]   @relation("MaintenanceWorkshop")
+  pickupBookings    CarRentalBookings[]               @relation("PickupLocation") // Reservas con esta ubicación como recogida
+  returnBookings    CarRentalBookings[]               @relation("ReturnLocation") // Reservas con esta ubicación como devolución
+  
+  @@map("business_locations")
+}
+
+model CarRentalCars {
+  id                      Int                          @id @default(autoincrement()) @map("id")
+  registration_number     String?                      @map("registration_number")
+  location_id             Int?                         @map("location_id")
+  car_type_id             Int?                         @map("car_type_id")
+  status                  UserStatus?                  @default(T) @map("status")
+  mileage                 Int?                         @map("mileage")
+  pricing_group_id        Int?                         @map("pricing_group_id")
+  
+  // Extended fields from schema extension
+  vin                     String?                      @map("vin")
+  year                    Int?                         @map("year")
+  make                    String?                      @map("make")
+  model                   String?                      @map("model")
+  color                   String?                      @map("color")
+  fuel_type               String?                      @default("gasoline") @map("fuel_type")
+  transmission_type       String?                      @default("manual") @map("transmission_type")
+  engine_size             String?                      @map("engine_size")
+  seating_capacity        Int?                         @map("seating_capacity")
+  purchase_date           DateTime?                    @map("purchase_date") @db.Date
+  purchase_price          Decimal?                     @map("purchase_price") @db.Decimal(12, 2)
+  current_value           Decimal?                     @map("current_value") @db.Decimal(12, 2)
+  market_value            Decimal?                     @map("market_value") @db.Decimal(12, 2)
+  sale_price              Decimal?                     @map("sale_price") @db.Decimal(12, 2)
+  
+  // Insurance Management
+  insurance_policy        String?                      @map("insurance_policy")
+  insurance_start_date    DateTime?                    @map("insurance_start_date") @db.Date
+  insurance_expiry        DateTime?                    @map("insurance_expiry") @db.Date
+  insurance_policy_type   String?                      @default("daily") @map("insurance_policy_type")  // annual, daily
+  insurance_active        Boolean?                     @default(false) @map("insurance_active")
+  registration_expiry     DateTime?                    @map("registration_expiry") @db.Date
+  
+  // ITV Management
+  itv_valid               Boolean?                     @default(false) @map("itv_valid")
+  last_itv_date           DateTime?                    @map("last_itv_date") @db.Date
+  itv_expiry              DateTime?                    @map("itv_expiry") @db.Date
+  itv_reminder_days       Int?                         @default(30) @map("itv_reminder_days")
+  
+  last_service_date       DateTime?                    @map("last_service_date") @db.Date
+  last_service_mileage    Int?                         @map("last_service_mileage")
+  next_service_due        DateTime?                    @map("next_service_due") @db.Date
+  next_service_mileage    Int?                         @map("next_service_mileage")
+  condition_rating        String?                      @default("good") @map("condition_rating")
+  notes                   String?                      @map("notes") @db.Text
+  created_at              DateTime?                    @default(now()) @map("created_at")
+  updated_at              DateTime?                    @updatedAt @map("updated_at")
+  
+  // Ownership Management
+  ownership_type          String?                      @default("owned") @map("ownership_type")  // owned, renting, commission
+  rental_contract_end     DateTime?                    @map("rental_contract_end") @db.Date
+  rental_monthly_payment  Decimal?                     @map("rental_monthly_payment") @db.Decimal(10, 2)
+  commission_percentage   Decimal?                     @map("commission_percentage") @db.Decimal(5, 2)
+  monthly_fixed_costs     Decimal?                     @map("monthly_fixed_costs") @db.Decimal(10, 2) // Gastos fijos mensuales para flota en depósito
+  rental_conditions       String?                      @map("rental_conditions") @db.Text // Condiciones del renting
+  
+  // Propietario/Cesionario Management (SOLO FK, sin campos de texto libre)
+  owner_user_id           Int?                         @map("owner_user_id") // ID del usuario propietario
+  depositor_user_id       Int?                         @map("depositor_user_id") // ID del usuario cesionario
+  
+  // Additional Management Fields
+  document_status         String?                      @map("document_status")  // Estado documental
+  spare_keys              Boolean?                     @default(false) @map("spare_keys")  // Copia de llaves
+  assigned_to             String?                      @map("assigned_to")  // A quién está asignado
+  current_location        String?                      @map("current_location")  // Ubicación actual detallada (LEGACY)
+  
+  // Business Location Management (NEW)
+  current_business_location_id  Int?                   @map("current_business_location_id")  // Nueva ubicación de negocio
+  location_reason              String?                 @map("location_reason")  // Motivo: mantenimiento, reparación, inspección, etc.
+  location_since               DateTime?               @map("location_since") @db.Timestamp(6)  // Desde cuándo está en esta ubicación
+
+  // Archive Management (for sold/retired vehicles)
+  archived_status         String?                      @map("archived_status")  // NULL, 'vendido', 'dado_de_baja'
+  archived_date           DateTime?                    @map("archived_date") @db.Date  // Fecha de archivo
+  archived_reason         String?                      @map("archived_reason") @db.Text  // Motivo/Notas del archivo
+  buyer_name              String?                      @map("buyer_name")  // Nombre del comprador (si es venta)
+  sale_amount             Decimal?                     @map("sale_amount") @db.Decimal(12, 2)  // Precio de venta
+
+  // Relationships
+  location                CarRentalLocations?          @relation(fields: [location_id], references: [id])
+  businessLocation        BusinessLocations?           @relation("VehicleBusinessLocation", fields: [current_business_location_id], references: [id])
+  pricingGroup            CarRentalPricingGroups?      @relation("VehiclePricingGroup", fields: [pricing_group_id], references: [id])
+  ownerUser               CarRentalUsers?              @relation("VehicleOwner", fields: [owner_user_id], references: [id])
+  depositorUser           CarRentalUsers?              @relation("VehicleDepositor", fields: [depositor_user_id], references: [id])
+  bookings                CarRentalBookings[]
+  bookingVehicles         BookingVehicles[]            @relation("BookingVehicles")
+  maintenance             CarRentalVehicleMaintenance[]
+  calendarEvents          CarRentalCalendarEvents[]
+  vehicleHistory          CarRentalVehicleHistory[]
+  documents               CarRentalVehicleDocuments[]
+  gastos                  CarRentalGastos[]            @relation("VehicleExpense")
+  inspections             VehicleInspections[]         // ✅ NUEVO: Relación con inspecciones
+
+  @@map("car_rental_cars")
+}
+
+model CarRentalBookings {
+  id                              Int               @id @default(autoincrement()) @map("id")
+  booking_number                  String?           @unique @map("booking_number") // Número de expediente: aaaammdd0001
+  car_id                          Int?              @map("car_id") // LEGACY: Mantener por compatibilidad. Usar booking_vehicles para nuevas reservas
+  customer_id                     Int?              @map("customer_id")
+  customer_name                   String?           @map("customer_name")
+  customer_email                  String?           @map("customer_email")
+  customer_phone                  String?           @map("customer_phone")
+  pickup_date                     DateTime?         @map("pickup_date")
+  return_date                     DateTime?         @map("return_date")
+  total_price                     Decimal?          @map("total_price") @db.Decimal(9, 2)
+  status                          String?           @default("confirmed") @map("status")
+  metodo_pago                     MetodoPago?       @map("metodo_pago") // Método de pago usado al completar la reserva
+  
+  // Extended fields from schema extension
+  actual_pickup_datetime          DateTime?         @map("actual_pickup_datetime")
+  actual_return_datetime          DateTime?         @map("actual_return_datetime")
+  pickup_condition_notes          String?           @map("pickup_condition_notes") @db.Text
+  return_condition_notes          String?           @map("return_condition_notes") @db.Text
+  fuel_level_pickup               String?           @map("fuel_level_pickup")
+  fuel_level_return               String?           @map("fuel_level_return")
+  damage_reported                 String?           @default("N") @map("damage_reported")
+  damage_description              String?           @map("damage_description") @db.Text
+  additional_charges              Decimal?          @default(0.00) @map("additional_charges") @db.Decimal(9, 2)
+  additional_charges_description  String?           @map("additional_charges_description") @db.Text
+  customer_signature_path         String?           @map("customer_signature_path")
+  staff_signature_path            String?           @map("staff_signature_path")
+  pickup_staff_id                 Int?              @map("pickup_staff_id")
+  return_staff_id                 Int?              @map("return_staff_id")
+  gscontrol_external_id           String?           @map("gscontrol_external_id") // ID único de sincronización con GSControl
+  google_drive_folder_id          String?           @map("google_drive_folder_id") // ID de carpeta en Google Drive
+  google_drive_folder_url         String?           @map("google_drive_folder_url") // URL pública de la carpeta en Google Drive
+  
+  // Sistema de Afiliados/Tracking
+  referred_by_user_id             Int?              @map("referred_by_user_id") // ID del usuario/colaborador que refirió esta reserva
+  referral_source                 String?           @map("referral_source") // Origen de la referencia (web, widget, directo, etc.)
+  
+  // Ubicaciones de Recogida y Devolución
+  pickup_location_id              Int?              @map("pickup_location_id") // ID de la ubicación de recogida desde BusinessLocations
+  return_location_id              Int?              @map("return_location_id") // ID de la ubicación de devolución desde BusinessLocations
+
+  // Relationships
+  car                             CarRentalCars?    @relation(fields: [car_id], references: [id])
+  customer                        CarRentalCustomers? @relation(fields: [customer_id], references: [id])
+  pickupStaff                     CarRentalUsers?   @relation("PickupStaff", fields: [pickup_staff_id], references: [id])
+  returnStaff                     CarRentalUsers?   @relation("ReturnStaff", fields: [return_staff_id], references: [id])
+  referredBy                      CarRentalUsers?   @relation("ReferredBookings", fields: [referred_by_user_id], references: [id]) // Usuario que refirió
+  pickupLocation                  BusinessLocations? @relation("PickupLocation", fields: [pickup_location_id], references: [id]) // Ubicación de recogida
+  returnLocation                  BusinessLocations? @relation("ReturnLocation", fields: [return_location_id], references: [id]) // Ubicación de devolución
+  contract                        CarRentalContracts?
+  factura                         CarRentalFacturas?
+  inspections                     VehicleInspections[]
+  vehicles                        BookingVehicles[] // Relación muchos-a-muchos con vehículos
+  drivers                         BookingDrivers[]  // Conductores adicionales
+  extras                          BookingExtras[]   // Extras de la reserva
+  upgrades                        BookingUpgrades[] // Upgrades de la reserva
+  experiences                     BookingExperiences[] // Experiencias de la reserva
+  payments                        BookingPayments[] @relation("BookingPayments") // Pagos de la reserva
+  deposits                        BookingDeposits[] @relation("BookingDeposit") // Depósitos de la reserva (múltiples permitidos)
+  inspectionLinks                 InspectionLink[] // Enlaces públicos para ver inspecciones
+
+  @@map("car_rental_bookings")
+}
+
+// New Extended Tables
+model CarRentalWorkshops {
+  id                      Int                               @id @default(autoincrement()) @map("id")
+  name                    String                            @map("name")
+  contact_name            String?                           @map("contact_name")
+  phone                   String?                           @map("phone")
+  email                   String?                           @map("email")
+  address                 String?                           @map("address") @db.Text
+  city                    String?                           @map("city")
+  postal_code             String?                           @map("postal_code")
+  specialties             String?                           @map("specialties") @db.Text // Especialidades separadas por comas
+  notes                   String?                           @map("notes") @db.Text
+  is_active               Boolean                           @default(true) @map("is_active")
+  created_at              DateTime                          @default(now()) @map("created_at")
+  updated_at              DateTime?                         @updatedAt @map("updated_at")
+
+  @@map("car_rental_workshops")
+}
+
+model CarRentalVehicleMaintenance {
+  id                        Int                               @id @default(autoincrement()) @map("id")
+  car_id                    Int                               @map("car_id")
+  maintenance_type          String                            @default("preventive") @map("maintenance_type")
+  title                     String                            @map("title")
+  description               String?                           @map("description") @db.Text
+  scheduled_date            DateTime                          @map("scheduled_date")
+  completed_date            DateTime?                         @map("completed_date")
+  next_maintenance_date     DateTime?                         @map("next_maintenance_date")
+  mileage_at_maintenance    Int?                              @map("mileage_at_maintenance")
+  next_maintenance_mileage  Int?                              @map("next_maintenance_mileage")
+  status                    String                            @default("scheduled") @map("status")
+  priority                  String                            @default("medium") @map("priority")
+  estimated_duration_hours  Decimal?                          @map("estimated_duration_hours") @db.Decimal(4, 2)
+  actual_duration_hours     Decimal?                          @map("actual_duration_hours") @db.Decimal(4, 2)
+  workshop_id               Int?                              @map("workshop_id")
+  workshop_location         String?                           @map("workshop_location")
+  notes                     String?                           @map("notes") @db.Text
+  created_by                Int?                              @map("created_by")
+  
+  // Campos de pago (FASE 5A)
+  is_paid                   Boolean                           @default(false) @map("is_paid") // Si el mantenimiento está pagado
+  paid_date                 DateTime?                         @map("paid_date") // Fecha de pago
+  payment_method            String?                           @map("payment_method") // Método de pago usado
+  tipo_documento            String?                           @map("tipo_documento") // 'ticket' o 'factura'
+  numero_factura            String?                           @map("numero_factura") // Número de factura del proveedor
+  
+  created_at                DateTime                          @default(now()) @map("created_at")
+  updated_at                DateTime?                         @updatedAt @map("updated_at")
+
+  // Relationships
+  car                       CarRentalCars                     @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  workshop                  BusinessLocations?                @relation("MaintenanceWorkshop", fields: [workshop_id], references: [id])
+  creator                   CarRentalUsers?                   @relation("MaintenanceCreator", fields: [created_by], references: [id])
+  expenses                  CarRentalMaintenanceExpenses[]
+  calendarEvents            CarRentalCalendarEvents[]
+  gastoGenerado             CarRentalGastos?                  @relation("MaintenanceExpense") // Gasto generado al pagar
+
+  @@map("car_rental_vehicle_maintenance")
+}
+
+model CarRentalMaintenanceExpenses {
+  id                      Int                         @id @default(autoincrement()) @map("id")
+  maintenance_id          Int                         @map("maintenance_id")
+  expense_category        String                      @map("expense_category")
+  item_name               String                      @map("item_name")
+  description             String?                     @map("description") @db.Text
+  quantity                Decimal                     @default(1.00) @map("quantity") @db.Decimal(8, 2)
+  unit_price              Decimal                     @map("unit_price") @db.Decimal(10, 2)
+  total_price             Decimal                     @map("total_price") @db.Decimal(10, 2)
+  supplier                String?                     @map("supplier")
+  invoice_number          String?                     @map("invoice_number")
+  purchase_date           DateTime?                   @map("purchase_date") @db.Date
+  warranty_months         Int?                        @map("warranty_months")
+  warranty_expires        DateTime?                   @map("warranty_expires") @db.Date
+  is_billable_to_customer String                      @default("N") @map("is_billable_to_customer")
+  tax_rate                Decimal                     @default(0.00) @map("tax_rate") @db.Decimal(5, 2)
+  tax_amount              Decimal                     @default(0.00) @map("tax_amount") @db.Decimal(10, 2)
+  notes                   String?                     @map("notes") @db.Text
+  receipt_path            String?                     @map("receipt_path")
+  paid_by                 ExpensePaidBy               @default(WORKSHOP) @map("paid_by")
+  gscontrol_id            String?                     @map("gscontrol_id") // ID de sincronización con GSControl
+  created_at              DateTime                    @default(now()) @map("created_at")
+  updated_at              DateTime?                   @updatedAt @map("updated_at")
+
+  // Relationships
+  maintenance             CarRentalVehicleMaintenance @relation(fields: [maintenance_id], references: [id], onDelete: Cascade)
+
+  @@map("car_rental_maintenance_expenses")
+  @@index([gscontrol_id])
+}
+
+model CarRentalCalendarEvents {
+  id                      Int                         @id @default(autoincrement()) @map("id")
+  event_type              String                      @map("event_type")
+  reference_id            Int?                        @map("reference_id")
+  car_id                  Int?                        @map("car_id")
+  location_id             Int?                        @map("location_id")
+  title                   String                      @map("title")
+  description             String?                     @map("description") @db.Text
+  start_datetime          DateTime                    @map("start_datetime")
+  end_datetime            DateTime                    @map("end_datetime")
+  all_day                 String                      @default("N") @map("all_day")
+  recurring               String                      @default("none") @map("recurring")
+  recurring_until         DateTime?                   @map("recurring_until") @db.Date
+  recurring_interval      Int                         @default(1) @map("recurring_interval")
+  color                   String                      @default("#3788d8") @map("color")
+  status                  String                      @default("confirmed") @map("status")
+  priority                String                      @default("medium") @map("priority")
+  reminder_minutes        Int?                        @map("reminder_minutes")
+  is_public               String                      @default("Y") @map("is_public")
+  created_by              Int?                        @map("created_by")
+  assigned_to             Int?                        @map("assigned_to")
+  created_at              DateTime                    @default(now()) @map("created_at")
+  updated_at              DateTime?                   @updatedAt @map("updated_at")
+
+  // Relationships
+  car                     CarRentalCars?              @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  location                CarRentalLocations?         @relation(fields: [location_id], references: [id])
+  creator                 CarRentalUsers?             @relation("CalendarCreator", fields: [created_by], references: [id])
+  assignedTo              CarRentalUsers?             @relation("CalendarAssigned", fields: [assigned_to], references: [id])
+  maintenance             CarRentalVehicleMaintenance? @relation(fields: [reference_id], references: [id])
+
+  @@map("car_rental_calendar_events")
+}
+
+model CarRentalVehicleHistory {
+  id                      Int               @id @default(autoincrement()) @map("id")
+  car_id                  Int               @map("car_id")
+  event_type              String            @map("event_type")
+  event_date              DateTime          @map("event_date")
+  description             String            @map("description") @db.Text
+  old_value               String?           @map("old_value") @db.Text
+  new_value               String?           @map("new_value") @db.Text
+  mileage_at_event        Int?              @map("mileage_at_event")
+  cost                    Decimal?          @map("cost") @db.Decimal(10, 2)
+  reference_id            Int?              @map("reference_id")
+  reference_type          String?           @map("reference_type")
+  created_by              Int?              @map("created_by")
+  notes                   String?           @map("notes") @db.Text
+  created_at              DateTime          @default(now()) @map("created_at")
+
+  // Relationships
+  car                     CarRentalCars     @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  creator                 CarRentalUsers?   @relation(fields: [created_by], references: [id])
+
+  @@map("car_rental_vehicle_history")
+}
+
+model CarRentalVehicleDocuments {
+  id                      Int               @id @default(autoincrement()) @map("id")
+  car_id                  Int               @map("car_id")
+  document_type           String            @map("document_type")
+  title                   String            @map("title")
+  description             String?           @map("description") @db.Text
+  file_path               String            @map("file_path")
+  file_name               String            @map("file_name")
+  file_size               Int?              @map("file_size")
+  mime_type               String?           @map("mime_type")
+  issue_date              DateTime?         @map("issue_date") @db.Date
+  expiry_date             DateTime?         @map("expiry_date") @db.Date
+  is_expired              String            @default("N") @map("is_expired")
+  reminder_days_before    Int               @default(30) @map("reminder_days_before")
+  uploaded_by             Int?              @map("uploaded_by")
+  created_at              DateTime          @default(now()) @map("created_at")
+  updated_at              DateTime?         @updatedAt @map("updated_at")
+
+  // Relationships
+  car                     CarRentalCars     @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  uploader                CarRentalUsers?   @relation(fields: [uploaded_by], references: [id])
+
+  @@map("car_rental_vehicle_documents")
+}
+
+model CarRentalHybridConfig {
+  id                      Int               @id @default(autoincrement()) @map("id")
+  config_key              String            @unique @map("config_key")
+  config_value            String?           @map("config_value") @db.Text
+  config_type             String            @default("string") @map("config_type")
+  category                String            @default("general") @map("category")
+  description             String?           @map("description") @db.Text
+  is_public               String            @default("N") @map("is_public")
+  created_at              DateTime          @default(now()) @map("created_at")
+  updated_at              DateTime?         @updatedAt @map("updated_at")
+
+  @@map("car_rental_hybrid_config")
+}
+
+model CarRentalNotifications {
+  id                      Int               @id @default(autoincrement()) @map("id")
+  user_id                 Int?              @map("user_id")
+  type                    String            @map("type")
+  title                   String            @map("title")
+  message                 String            @map("message") @db.Text
+  reference_id            Int?              @map("reference_id")
+  reference_type          String?           @map("reference_type")
+  priority                String            @default("medium") @map("priority")
+  is_read                 String            @default("N") @map("is_read")
+  is_sent                 String            @default("N") @map("is_sent")
+  send_email              String            @default("N") @map("send_email")
+  send_sms                String            @default("N") @map("send_sms")
+  scheduled_for           DateTime?         @map("scheduled_for")
+  sent_at                 DateTime?         @map("sent_at")
+  created_at              DateTime          @default(now()) @map("created_at")
+
+  // Relationships
+  user                    CarRentalUsers?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("car_rental_notifications")
+}
+
+// Customer Management
+model CarRentalCustomers {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  first_name              String                @map("first_name")
+  last_name               String                @map("last_name")
+  email                   String?               @unique @map("email")
+  phone                   String                @map("phone")
+  
+  // Validación de Teléfono
+  phone_verified          Boolean               @default(false) @map("phone_verified")
+  phone_verification_date DateTime?             @map("phone_verification_date")
+  phone_verification_method String?             @map("phone_verification_method")
+  
+  // Dirección Permanente Completa (OPCIONAL - la información está en los documentos escaneados)
+  street_address          String?               @map("street_address")  // Calle y número
+  address                 String?               @map("address") @db.Text  // Campo legacy - mantener por compatibilidad
+  address_details         String?               @map("address_details") @db.Text  // Piso, puerta, etc.
+  postal_code             String?               @map("postal_code")
+  city                    String?               @map("city")
+  state                   String?               @map("state")  // Provincia/Estado
+  country                 String?               @default("España") @map("country")
+  
+  // Documentación Legal (OPCIONAL - los números están en los documentos físicos escaneados)
+  dni_nie                 String?               @unique @map("dni_nie")  // Número de DNI/NIE/Pasaporte (opcional si hay documentos)
+  driver_license          String?               @map("driver_license")  // Número de carnet (opcional si hay documentos)
+  license_expiry          DateTime?             @map("license_expiry") @db.Date
+  date_of_birth           DateTime?             @map("date_of_birth") @db.Date
+  
+  // Tipo de Cliente
+  customer_type           String                @default("individual") @map("customer_type")
+  company_name            String?               @map("company_name")
+  tax_id                  String?               @map("tax_id")
+  
+  // Preferencias y Notas
+  preferred_language      String?               @default("es") @map("preferred_language")
+  notes                   String?               @map("notes") @db.Text
+  status                  String                @default("active") @map("status")
+  
+  // Gestión Documental (S3 Cloud Storage Paths)
+  // Carnet de Conducir (Ambas caras OBLIGATORIAS)
+  driver_license_front    String?               @map("driver_license_front")
+  driver_license_back     String?               @map("driver_license_back")
+  
+  // Documento de Identidad/Pasaporte (Ambas caras OBLIGATORIAS)
+  id_document_front       String?               @map("id_document_front")
+  id_document_back        String?               @map("id_document_back")
+  
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+
+  // Relationships
+  bookings                CarRentalBookings[]
+  contracts               CarRentalContracts[]
+  facturas                CarRentalFacturas[]
+
+  @@map("car_rental_customers")
+}
+
+// Categorías de Vehículos Configurables
+model CarRentalVehicleCategories {
+  id                      Int                             @id @default(autoincrement()) @map("id")
+  name                    String                          @unique @map("name")
+  description             String?                         @map("description") @db.Text
+  display_order           Int                             @default(0) @map("display_order")
+  is_active               Boolean                         @default(true) @map("is_active")
+  icon                    String?                         @default("car") @map("icon")
+  created_at              DateTime                        @default(now()) @map("created_at")
+  updated_at              DateTime?                       @updatedAt @map("updated_at")
+
+  // Relaciones
+  pricingGroups           CarRentalPricingGroups[]
+
+  @@map("car_rental_vehicle_categories")
+}
+
+// Pricing System - Grupos de Tarifas Base
+model CarRentalPricingGroups {
+  id                      Int                             @id @default(autoincrement()) @map("id")
+  name                    String                          @unique @map("name")
+  description             String?                         @map("description") @db.Text
+  vehicle_category_id     Int?                            @map("vehicle_category_id")
+  
+  // Tarifas de TEMPORADA ALTA por rangos de días
+  price_1_3_days          Decimal                         @default(50.00) @map("price_1_3_days") @db.Decimal(10, 2)
+  price_4_7_days          Decimal                         @default(45.00) @map("price_4_7_days") @db.Decimal(10, 2)
+  price_8_plus_days       Decimal                         @default(40.00) @map("price_8_plus_days") @db.Decimal(10, 2)
+  
+  // Tarifas de TEMPORADA BAJA por rangos de días (tarifas absolutas)
+  price_1_3_days_low      Decimal?                        @map("price_1_3_days_low") @db.Decimal(10, 2)
+  price_4_7_days_low      Decimal?                        @map("price_4_7_days_low") @db.Decimal(10, 2)
+  price_8_plus_days_low   Decimal?                        @map("price_8_plus_days_low") @db.Decimal(10, 2)
+  
+  // Suscripciones TEMPORADA ALTA
+  price_monthly_high      Decimal?                        @map("price_monthly_high") @db.Decimal(10, 2)
+  price_annual_full       Decimal?                        @map("price_annual_full") @db.Decimal(10, 2)
+  
+  // Suscripciones TEMPORADA BAJA (tarifas absolutas)
+  price_monthly_low       Decimal?                        @map("price_monthly_low") @db.Decimal(10, 2)
+  
+  // Mínimo de meses por temporada
+  min_months_high_season  Int                             @default(3) @map("min_months_high_season")
+  min_months_low_season   Int                             @default(1) @map("min_months_low_season")
+  min_months_full_year    Int                             @default(12) @map("min_months_full_year")
+  
+  // DEPRECATED: Multiplicador de temporada baja (mantener por compatibilidad, pero ahora usamos tarifas absolutas)
+  low_season_multiplier   Decimal?                        @map("low_season_multiplier") @db.Decimal(4, 2)
+  
+  // Kilometraje incluido y cargos
+  included_km_per_day     Int                             @default(0) @map("included_km_per_day")
+  extra_km_charge         Decimal                         @default(0) @map("extra_km_charge") @db.Decimal(10, 2)
+  deposit_amount          Decimal                         @default(0) @map("deposit_amount") @db.Decimal(10, 2)
+  
+  status                  String                          @default("active") @map("status")
+  created_at              DateTime                        @default(now()) @map("created_at")
+  updated_at              DateTime?                       @updatedAt @map("updated_at")
+
+  // Relaciones
+  category                CarRentalVehicleCategories?     @relation(fields: [vehicle_category_id], references: [id])
+  vehicles                CarRentalCars[]                 @relation("VehiclePricingGroup")
+
+  @@map("car_rental_pricing_groups")
+}
+
+// Configuración de Temporadas
+model CarRentalSeasonConfig {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  season_name             String                @map("season_name") // "Alta" o "Baja"
+  start_month             Int                   @map("start_month") // 1-12
+  start_day               Int                   @map("start_day") // 1-31
+  end_month               Int                   @map("end_month") // 1-12
+  end_day                 Int                   @map("end_day") // 1-31
+  is_high_season          Boolean               @default(true) @map("is_high_season")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+
+  @@map("car_rental_season_config")
+}
+
+// Upgrades/Add-ons Configurables
+model CarRentalUpgrades {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  name                    String                @unique @map("name")
+  description             String?               @map("description") @db.Text
+  upgrade_type            String                @map("upgrade_type") // "unlimited_km", "second_driver", "mobile_support", "full_package"
+  fee_per_day             Decimal               @map("fee_per_day") @db.Decimal(10, 2)
+  is_available            Boolean               @default(true) @map("is_available")
+  display_order           Int                   @default(0) @map("display_order")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+  
+  // Relaciones
+  bookings                BookingUpgrades[]     // Reservas que tienen este upgrade
+
+  @@map("car_rental_upgrades")
+}
+
+// Extras (Servicio a domicilio, etc.)
+model CarRentalExtras {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  name                    String                @map("name")
+  description             String?               @map("description") @db.Text
+  extra_type              String                @map("extra_type") // "home_delivery", "airport_pickup", "child_seat", etc.
+  pricing_type            String                @default("fixed") @map("pricing_type") // "fixed", "per_km", "per_day"
+  
+  // Para rangos de distancia en servicio a domicilio
+  distance_range_min      Int?                  @map("distance_range_min") // km
+  distance_range_max      Int?                  @map("distance_range_max") // km
+  
+  price                   Decimal               @map("price") @db.Decimal(10, 2)
+  is_available            Boolean               @default(true) @map("is_available")
+  display_order           Int                   @default(0) @map("display_order")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+  
+  // Relaciones
+  bookings                BookingExtras[]       // Reservas que tienen este extra
+
+  @@map("car_rental_extras")
+}
+
+// Experiencias/Actividades Adicionales
+model CarRentalExperiences {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  name                    String                @map("name")
+  description             String?               @map("description") @db.Text
+  experience_type         String                @map("experience_type") // "jetski", "boat_tour", "parasailing", "buggy", "quad", etc.
+  
+  // Tarifación de experiencias
+  price_per_hour          Decimal?              @map("price_per_hour") @db.Decimal(10, 2)
+  price_per_day           Decimal?              @map("price_per_day") @db.Decimal(10, 2)
+  price_fixed             Decimal?              @map("price_fixed") @db.Decimal(10, 2)
+  
+  duration_minutes        Int?                  @map("duration_minutes")
+  max_participants        Int?                  @map("max_participants")
+  min_age                 Int?                  @map("min_age")
+  
+  // Imágenes y disponibilidad
+  image_url               String?               @map("image_url")
+  is_available            Boolean               @default(true) @map("is_available")
+  requires_booking        Boolean               @default(true) @map("requires_booking")
+  advance_booking_hours   Int                   @default(24) @map("advance_booking_hours")
+  
+  display_order           Int                   @default(0) @map("display_order")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+  
+  // Relaciones
+  bookings                BookingExperiences[]  // Reservas que tienen esta experiencia
+
+  @@map("car_rental_experiences")
+}
+
+// Working Hours Configuration
+model CarRentalWorkingHours {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  day_of_week             Int                   @map("day_of_week") // 0=Sunday, 1=Monday, ..., 6=Saturday
+  is_working_day          Boolean               @default(true) @map("is_working_day")
+  opening_time            String                @map("opening_time") // Format: "09:00"
+  closing_time            String                @map("closing_time") // Format: "19:00"
+  break_start_time        String?               @map("break_start_time")
+  break_end_time          String?               @map("break_end_time")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+
+  @@unique([day_of_week])
+  @@map("car_rental_working_hours")
+}
+
+// Contracts/Contratos
+model CarRentalContracts {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  booking_id              Int                   @unique @map("booking_id")
+  customer_id             Int                   @map("customer_id")
+  
+  // Datos del contrato
+  contract_number         String                @unique @map("contract_number") // Número único del contrato
+  contract_text           String                @map("contract_text") @db.Text // Texto completo del contrato
+  version                 Int                   @default(1) @map("version") // Versión del contrato (se incrementa con cada regeneración)
+  
+  // Firma digital
+  signed_at               DateTime?             @map("signed_at")
+  signature_data          String?               @map("signature_data") @db.Text // Base64 de la firma
+  ip_address              String?               @map("ip_address")
+  user_agent              String?               @map("user_agent") @db.Text
+  
+  // Firma remota
+  remote_signature_token          String?       @unique @map("remote_signature_token") // Token único para firma remota
+  remote_signature_token_expires  DateTime?     @map("remote_signature_token_expires") // Fecha de expiración del token
+  remote_signature_sent_at        DateTime?     @map("remote_signature_sent_at") // Fecha de envío del enlace
+  remote_signature_sent_to        String?       @map("remote_signature_sent_to") // Email/teléfono al que se envió
+  
+  // PDF generado
+  pdf_url                 String?               @map("pdf_url")
+  pdf_cloud_storage_path  String?               @map("pdf_cloud_storage_path") // Ruta del PDF en S3
+  
+  // Metadatos
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+  
+  // Relaciones
+  booking                 CarRentalBookings     @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  customer                CarRentalCustomers    @relation(fields: [customer_id], references: [id])
+  history                 ContractHistory[]     // Historial de versiones del contrato
+
+  @@map("car_rental_contracts")
+}
+
+// Historial de contratos para trazabilidad
+model ContractHistory {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  contract_id             Int                   @map("contract_id")
+  version                 Int                   @map("version") // Número de versión
+  contract_text           String                @map("contract_text") @db.Text // Contenido del contrato en esta versión
+  change_reason           String?               @map("change_reason") @db.Text // Razón del cambio (ej: "Añadido vehículo adicional", "Cambio de vehículo por avería")
+  created_at              DateTime              @default(now()) @map("created_at")
+  created_by              String?               @map("created_by") // Usuario o sistema que hizo el cambio
+  
+  // Relaciones
+  contract                CarRentalContracts    @relation(fields: [contract_id], references: [id], onDelete: Cascade)
+
+  @@map("contract_history")
+  @@index([contract_id, version])
+}
+
+// Vehicle Inspections / Inspecciones de vehículos
+model VehicleInspections {
+  id                    Int                       @id @default(autoincrement())
+  booking_id            Int                       @map("booking_id")
+  vehicle_id            Int?                      @map("vehicle_id") // ✅ NUEVO: ID del vehículo específico en reservas multivehículo
+  inspection_type       String                    @map("inspection_type") // 'delivery' o 'return'
+  
+  // Datos del vehículo
+  odometer_reading      Int?                      @map("odometer_reading")
+  fuel_level            String?                   @map("fuel_level") // 'empty', 'quarter', 'half', 'three_quarters', 'full'
+  
+  // Fotos principales (URLs en S3)
+  front_photo           String?                   @map("front_photo") @db.Text
+  left_photo            String?                   @map("left_photo") @db.Text
+  rear_photo            String?                   @map("rear_photo") @db.Text
+  right_photo           String?                   @map("right_photo") @db.Text
+  odometer_photo        String?                   @map("odometer_photo") @db.Text
+  
+  // Estado general
+  general_condition     String?                   @map("general_condition") @db.Text
+  notes                 String?                   @map("notes") @db.Text
+  
+  // Auditoría
+  inspector_id          Int?                      @map("inspector_id")
+  inspection_date       DateTime                  @default(now()) @map("inspection_date")
+  created_at            DateTime                  @default(now()) @map("created_at")
+  updated_at            DateTime                  @updatedAt @map("updated_at")
+
+  booking               CarRentalBookings         @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  vehicle               CarRentalCars?            @relation(fields: [vehicle_id], references: [id], onDelete: SetNull) // ✅ NUEVO
+  inspector             CarRentalUsers?           @relation(fields: [inspector_id], references: [id])
+  damages               InspectionDamages[]
+  extras                InspectionExtras[]
+
+  @@map("vehicle_inspections")
+}
+
+// Enlaces públicos para ver inspecciones (sin login)
+model InspectionLink {
+  id                    Int                       @id @default(autoincrement())
+  booking_id            Int                       @map("booking_id")
+  token                 String                    @unique @map("token") // Token único para el enlace
+  expires_at            DateTime                  @map("expires_at") // Fecha de expiración (30 días desde creación)
+  created_at            DateTime                  @default(now()) @map("created_at")
+  
+  booking               CarRentalBookings         @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  
+  @@index([token], map: "idx_inspection_token")
+  @@map("inspection_links")
+}
+
+
+model InspectionDamages {
+  id                    Int                       @id @default(autoincrement())
+  inspection_id         Int                       @map("inspection_id")
+  description           String                    @map("description") @db.Text
+  severity              String?                   @map("severity") // 'minor', 'moderate', 'severe'
+  location              String?                   @map("location") // 'front', 'rear', 'left', 'right', 'roof', 'interior'
+  photo_url             String?                   @map("photo_url") @db.Text
+  
+  // Tasación de daños
+  estimated_cost        Decimal?                  @map("estimated_cost") @db.Decimal(10, 2) // Coste estimado inicial
+  actual_cost           Decimal?                  @map("actual_cost") @db.Decimal(10, 2) // Coste real tras reparación
+  repair_status         String?                   @default("pending") @map("repair_status") // 'pending', 'in_progress', 'completed', 'waived'
+  payment_status        String?                   @default("unpaid") @map("payment_status") // 'unpaid', 'paid', 'disputed'
+  responsible_party     String?                   @default("customer") @map("responsible_party") // 'customer', 'company', 'insurance', 'shared'
+  notes                 String?                   @map("notes") @db.Text // Notas adicionales sobre la tasación
+  
+  created_at            DateTime                  @default(now()) @map("created_at")
+  updated_at            DateTime?                 @updatedAt @map("updated_at")
+
+  inspection            VehicleInspections        @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
+  spare_parts           DamageSpareParts[]
+
+  @@map("inspection_damages")
+}
+
+// Tabla intermedia para relacionar daños con repuestos usados
+model DamageSpareParts {
+  id                    Int                       @id @default(autoincrement())
+  damage_id             Int                       @map("damage_id")
+  spare_part_id         Int                       @map("spare_part_id")
+  quantity              Int                       @default(1) @map("quantity")
+  unit_price            Decimal                   @map("unit_price") @db.Decimal(10, 2) // Precio unitario al momento del daño
+  total_price           Decimal                   @map("total_price") @db.Decimal(10, 2) // Precio total (quantity * unit_price)
+  notes                 String?                   @map("notes") @db.Text
+  created_at            DateTime                  @default(now()) @map("created_at")
+
+  damage                InspectionDamages         @relation(fields: [damage_id], references: [id], onDelete: Cascade)
+  spare_part            CarRentalSpareParts       @relation(fields: [spare_part_id], references: [id])
+
+  @@map("damage_spare_parts")
+}
+
+model InspectionExtras {
+  id                    Int                       @id @default(autoincrement())
+  inspection_id         Int                       @map("inspection_id")
+  extra_type            String                    @map("extra_type") // 'helmet', 'phone_mount', 'gps', 'child_seat', etc.
+  description           String                    @map("description")
+  quantity              Int?                      @default(1) @map("quantity")
+  size                  String?                   @map("size") // Para cascos: 'S', 'M', 'L', 'XL'
+  identifier            String?                   @map("identifier") // Número de casco, etc.
+  notes                 String?                   @map("notes") @db.Text
+  created_at            DateTime                  @default(now()) @map("created_at")
+
+  inspection            VehicleInspections        @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
+
+  @@map("inspection_extras")
+}
+
+// Catálogo de Repuestos por Modelo
+model CarRentalSpareParts {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  vehicle_model           String                @map("vehicle_model") // Ej: "Piaggio Liberty 125"
+  part_name               String                @map("part_name") // Ej: "Espejo retrovisor derecho"
+  part_code               String?               @map("part_code") // Referencia/código del repuesto
+  part_category           String                @default("carroceria") @map("part_category") // carroceria, mecanica, electrica, neumaticos, otros
+  price                   Decimal               @map("price") @db.Decimal(10, 2)
+  
+  // Relación con proveedor (nueva tabla)
+  supplier_id             Int?                  @map("supplier_id")
+  supplier_obj            Supplier?             @relation(fields: [supplier_id], references: [id], onDelete: SetNull)
+  
+  supplier                String?               @map("supplier") // Proveedor habitual (legacy, mantener por compatibilidad)
+  supplier_code           String?               @map("supplier_code") // Código del proveedor
+  notes                   String?               @map("notes") @db.Text
+  is_active               Boolean               @default(true) @map("is_active")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+
+  damage_usage            DamageSpareParts[]
+
+  @@index([vehicle_model])
+  @@index([supplier_id])
+  @@map("car_rental_spare_parts")
+}
+
+// Tabla intermedia: Vehículos por Reserva (muchos a muchos)
+// Permite múltiples vehículos en una misma reserva/contrato
+model BookingVehicles {
+  id                    Int                       @id @default(autoincrement())
+  booking_id            Int                       @map("booking_id")
+  car_id                Int                       @map("car_id")
+  
+  // Precio individual de este vehículo en la reserva
+  vehicle_price         Decimal                   @map("vehicle_price") @db.Decimal(9, 2)
+  
+  // Notas específicas de este vehículo en la reserva
+  notes                 String?                   @map("notes") @db.Text
+  
+  created_at            DateTime                  @default(now()) @map("created_at")
+  
+  // Relationships
+  booking               CarRentalBookings         @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  car                   CarRentalCars             @relation("BookingVehicles", fields: [car_id], references: [id])
+  
+  @@unique([booking_id, car_id])
+  @@index([booking_id])
+  @@index([car_id])
+  @@map("booking_vehicles")
+}
+
+// Conductores adicionales por reserva
+// Cada reserva puede tener múltiples conductores declarados
+model BookingDrivers {
+  id                    Int                       @id @default(autoincrement())
+  booking_id            Int                       @map("booking_id")
+  
+  // Datos del conductor
+  full_name             String                    @map("full_name")
+  dni_nie               String                    @map("dni_nie") // Documento de identidad
+  driver_license        String                    @map("driver_license") // Número de carnet
+  license_expiry        DateTime?                 @map("license_expiry") @db.Date
+  phone                 String?                   @map("phone")
+  email                 String?                   @map("email")
+  date_of_birth         DateTime?                 @map("date_of_birth") @db.Date
+  
+  // Documentos (cloud storage paths)
+  driver_license_front  String?                   @map("driver_license_front")
+  driver_license_back   String?                   @map("driver_license_back")
+  id_document_front     String?                   @map("id_document_front")
+  id_document_back      String?                   @map("id_document_back")
+  
+  // Relación con vehículo específico (opcional)
+  assigned_vehicle_id   Int?                      @map("assigned_vehicle_id")
+  
+  notes                 String?                   @map("notes") @db.Text
+  
+  created_at            DateTime                  @default(now()) @map("created_at")
+  updated_at            DateTime?                 @updatedAt @map("updated_at")
+  
+  // Relationships
+  booking               CarRentalBookings         @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  
+  @@index([booking_id])
+  @@map("booking_drivers")
+}
+
+// ============================================
+// SISTEMA DE FACTURACIÓN Y ADMINISTRACIÓN
+// ============================================
+
+// Facturas y Tickets (Billing System)
+model CarRentalFacturas {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  numero                  String                @unique @map("numero") // Numeración automática: YYYY-NNN
+  tipo                    TipoFactura           @default(TICKET) @map("tipo")
+  fecha                   DateTime              @default(now()) @map("fecha")
+  
+  // Cliente
+  customer_id             Int                   @map("customer_id")
+  
+  // Relación opcional con reserva
+  booking_id              Int?                  @unique @map("booking_id")
+  
+  // Importes
+  subtotal                Decimal               @map("subtotal") @db.Decimal(10, 2)
+  iva                     Decimal               @map("iva") @db.Decimal(10, 2)
+  total                   Decimal               @map("total") @db.Decimal(10, 2)
+  
+  // Estado y pago
+  estado                  EstadoFactura         @default(PENDIENTE) @map("estado")
+  metodo_pago             MetodoPago?           @map("metodo_pago")
+  
+  // Datos adicionales para facturas (no tickets)
+  datos_facturacion       String?               @map("datos_facturacion") @db.Text // JSON con datos fiscales del cliente
+  
+  // PDF generado
+  pdf_path                String?               @map("pdf_path")
+  
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+  
+  // Relationships
+  customer                CarRentalCustomers    @relation(fields: [customer_id], references: [id])
+  booking                 CarRentalBookings?    @relation(fields: [booking_id], references: [id])
+  items                   CarRentalFacturaItems[]
+
+  @@map("car_rental_facturas")
+}
+
+// Líneas de Factura
+model CarRentalFacturaItems {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  factura_id              Int                   @map("factura_id")
+  descripcion             String                @map("descripcion")
+  cantidad                Int                   @default(1) @map("cantidad")
+  precio_unitario         Decimal               @map("precio_unitario") @db.Decimal(10, 2)
+  total                   Decimal               @map("total") @db.Decimal(10, 2)
+  
+  created_at              DateTime              @default(now()) @map("created_at")
+  
+  // Relationships
+  factura                 CarRentalFacturas     @relation(fields: [factura_id], references: [id], onDelete: Cascade)
+
+  @@map("car_rental_factura_items")
+}
+
+// Gastos del Negocio (FASE 5B)
+// Diario de caja: incluye mantenimientos pagados, combustible, seguros, etc.
+// NO confundir con CarRentalMaintenanceExpenses (que son cotizaciones internas)
+model CarRentalGastos {
+  id                      Int                           @id @default(autoincrement()) @map("id")
+  fecha                   DateTime                      @default(now()) @map("fecha")
+  
+  // Tipo de documento
+  tipo_documento          TipoFactura                   @default(TICKET) @map("tipo_documento") // TICKET o FACTURA
+  numero_factura          String?                       @map("numero_factura") // Solo si es FACTURA
+  
+  // Proveedor (solo para facturas, opcional para tickets)
+  proveedor               String?                       @map("proveedor")
+  proveedor_cif           String?                       @map("proveedor_cif")
+  
+  // Categoría del gasto
+  categoria               String                        @map("categoria") // 'Mantenimiento', 'Combustible', 'Seguros', 'Impuestos', 'Otros'
+  descripcion             String                        @map("descripcion") // Concepto del gasto
+  
+  // Desglose fiscal (solo para FACTURAS)
+  base_imponible          Decimal?                      @map("base_imponible") @db.Decimal(10, 2)
+  iva_porcentaje          Decimal?                      @map("iva_porcentaje") @db.Decimal(5, 2) // Ej: 21
+  iva_importe             Decimal?                      @map("iva_importe") @db.Decimal(10, 2)   // IVA en euros
+  
+  // Total (siempre presente)
+  total                   Decimal                       @map("total") @db.Decimal(10, 2)
+  
+  // Método de pago
+  metodo_pago             MetodoPago                    @map("metodo_pago")
+  
+  // Relación con mantenimiento (si el gasto proviene de un mantenimiento pagado)
+  maintenance_id          Int?                          @unique @map("maintenance_id")
+  maintenance             CarRentalVehicleMaintenance?  @relation("MaintenanceExpense", fields: [maintenance_id], references: [id])
+  
+  // Relación con vehículo (opcional, útil para reportes)
+  vehicle_id              Int?                          @map("vehicle_id")
+  vehicle                 CarRentalCars?                @relation("VehicleExpense", fields: [vehicle_id], references: [id])
+  
+  // Sincronización con GSControl
+  gscontrol_id            String?                       @map("gscontrol_id") // ID de sincronización con GSControl
+  
+  // Adjunto (Cloud storage path)
+  adjunto                 Boolean                       @default(false) @map("adjunto")
+  factura_pdf_path        String?                       @map("factura_pdf_path") // Ruta S3 del documento adjunto
+  
+  created_at              DateTime                      @default(now()) @map("created_at")
+  updated_at              DateTime?                     @updatedAt @map("updated_at")
+
+  @@map("car_rental_gastos")
+}
+
+// Cierres de Caja (FASE 6)
+// Soporta períodos: Semanal (L-D), Mensual, Trimestral, Anual
+model CarRentalCierresCaja {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  
+  // Tipo de período
+  tipo_periodo            String                @map("tipo_periodo") // 'semanal', 'mensual', 'trimestral', 'anual'
+  
+  // Período del cierre
+  fecha_inicio            DateTime              @map("fecha_inicio") @db.Date
+  fecha_fin               DateTime              @map("fecha_fin") @db.Date
+  
+  // Ingresos por método de pago (facturas emitidas en el período)
+  ingresos_efectivo       Decimal               @default(0) @map("ingresos_efectivo") @db.Decimal(10, 2)
+  ingresos_tpv_sumup      Decimal               @default(0) @map("ingresos_tpv_sumup") @db.Decimal(10, 2)
+  ingresos_tpv_unicaja    Decimal               @default(0) @map("ingresos_tpv_unicaja") @db.Decimal(10, 2)
+  total_ingresos          Decimal               @default(0) @map("total_ingresos") @db.Decimal(10, 2)
+  
+  // Gastos por método de pago
+  gastos_efectivo         Decimal               @default(0) @map("gastos_efectivo") @db.Decimal(10, 2)
+  gastos_tpv_sumup        Decimal               @default(0) @map("gastos_tpv_sumup") @db.Decimal(10, 2)
+  gastos_tpv_unicaja      Decimal               @default(0) @map("gastos_tpv_unicaja") @db.Decimal(10, 2)
+  total_gastos            Decimal               @default(0) @map("total_gastos") @db.Decimal(10, 2)
+  
+  // Balance neto
+  balance_neto            Decimal               @default(0) @map("balance_neto") @db.Decimal(10, 2)
+  
+  // Efectivo en caja (ingresos efectivo - gastos efectivo)
+  efectivo_caja           Decimal               @default(0) @map("efectivo_caja") @db.Decimal(10, 2)
+  
+  // Notas y auditoría
+  observaciones           String?               @map("observaciones") @db.Text
+  usuario_id              Int?                  @map("usuario_id") // Usuario que realizó el cierre
+  
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+
+  @@map("car_rental_cierres_caja")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum TipoFactura {
+  TICKET
+  FACTURA
+}
+
+// Tabla intermedia: Extras de una reserva
+model BookingExtras {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  booking_id              Int                   @map("booking_id")
+  extra_id                Int                   @map("extra_id")
+  quantity                Int                   @default(1) @map("quantity")
+  unit_price              Decimal               @map("unit_price") @db.Decimal(10, 2)
+  total_price             Decimal               @map("total_price") @db.Decimal(10, 2)
+  
+  // Relaciones
+  booking                 CarRentalBookings     @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  extra                   CarRentalExtras       @relation(fields: [extra_id], references: [id])
+  
+  @@map("booking_extras")
+  @@index([booking_id])
+  @@index([extra_id])
+}
+
+// Tabla intermedia: Upgrades de una reserva
+model BookingUpgrades {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  booking_id              Int                   @map("booking_id")
+  upgrade_id              Int                   @map("upgrade_id")
+  days                    Int                   @map("days") // Número de días aplicados
+  unit_price_per_day      Decimal               @map("unit_price_per_day") @db.Decimal(10, 2)
+  total_price             Decimal               @map("total_price") @db.Decimal(10, 2)
+  
+  // Relaciones
+  booking                 CarRentalBookings     @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  upgrade                 CarRentalUpgrades     @relation(fields: [upgrade_id], references: [id])
+  
+  @@map("booking_upgrades")
+  @@index([booking_id])
+  @@index([upgrade_id])
+}
+
+// Tabla intermedia: Experiencias de una reserva
+model BookingExperiences {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  booking_id              Int                   @map("booking_id")
+  experience_id           Int                   @map("experience_id")
+  quantity                Int                   @default(1) @map("quantity") // Número de participantes o unidades
+  unit_price              Decimal               @map("unit_price") @db.Decimal(10, 2)
+  total_price             Decimal               @map("total_price") @db.Decimal(10, 2)
+  
+  // Relaciones
+  booking                 CarRentalBookings     @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  experience              CarRentalExperiences  @relation(fields: [experience_id], references: [id])
+  
+  @@map("booking_experiences")
+  @@index([booking_id])
+  @@index([experience_id])
+}
+
+// Sistema de Pagos para Reservas
+model BookingPayments {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  booking_id              Int                   @map("booking_id")
+  concepto                String                @map("concepto") // "Reserva inicial", "Extensión", "Extras", etc.
+  monto                   Decimal               @map("monto") @db.Decimal(10, 2)
+  metodo_pago             MetodoPago            @map("metodo_pago")
+  fecha_pago              DateTime              @default(now()) @map("fecha_pago")
+  notas                   String?               @map("notas") @db.Text
+  gscontrol_id            String?               @map("gscontrol_id") // ID de sincronización con GSControl
+  
+  // Relación
+  booking                 CarRentalBookings     @relation("BookingPayments", fields: [booking_id], references: [id], onDelete: Cascade)
+  
+  created_at              DateTime              @default(now()) @map("created_at")
+  
+  @@map("booking_payments")
+  @@index([booking_id])
+  @@index([fecha_pago])
+  @@index([gscontrol_id])
+}
+
+// Sistema de Depósitos para Reservas
+model BookingDeposits {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  booking_id              Int                   @map("booking_id") // Permite múltiples depósitos por reserva
+  monto_deposito          Decimal               @map("monto_deposito") @db.Decimal(10, 2)
+  metodo_pago_deposito    MetodoPago            @map("metodo_pago_deposito")
+  fecha_deposito          DateTime              @default(now()) @map("fecha_deposito")
+  
+  // Estado del depósito
+  estado                  String                @default("RETENIDO") @map("estado") // RETENIDO, DEVUELTO, PARCIALMENTE_DEVUELTO
+  monto_devuelto          Decimal               @default(0) @map("monto_devuelto") @db.Decimal(10, 2)
+  monto_descontado        Decimal               @default(0) @map("monto_descontado") @db.Decimal(10, 2)
+  fecha_devolucion        DateTime?             @map("fecha_devolucion")
+  metodo_devolucion       MetodoPago?           @map("metodo_devolucion")
+  
+  // Descuentos aplicados
+  descuento_danos         Decimal               @default(0) @map("descuento_danos") @db.Decimal(10, 2)
+  descuento_multas        Decimal               @default(0) @map("descuento_multas") @db.Decimal(10, 2)
+  descuento_extensiones   Decimal               @default(0) @map("descuento_extensiones") @db.Decimal(10, 2)
+  descuento_otros         Decimal               @default(0) @map("descuento_otros") @db.Decimal(10, 2)
+  
+  notas                   String?               @map("notas") @db.Text
+  gscontrol_id            String?               @map("gscontrol_id") // ID de sincronización con GSControl
+  
+  // Relación
+  booking                 CarRentalBookings     @relation("BookingDeposit", fields: [booking_id], references: [id], onDelete: Cascade)
+  
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime              @updatedAt @map("updated_at")
+  
+  @@map("booking_deposits")
+  @@index([booking_id])
+  @@index([estado])
+}
+
+enum EstadoFactura {
+  PENDIENTE
+  PAGADA
+  VENCIDA
+  CANCELADA
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TPV_SUMUP
+  TPV_UNICAJA
+}
+
+// Configuración de Empresa - Para multi-tenant y branding personalizable
+model CompanyConfig {
+  id                    Int       @id @default(autoincrement()) @map("id")
+  tenant_id             String?   @unique @map("tenant_id")  // Para multi-tenant futuro
+  company_name          String    @default("Alquilo Scooter") @map("company_name")
+  company_nif           String    @default("B12345678") @map("company_nif")
+  company_address       String    @default("Calle Ejemplo 123") @map("company_address")
+  company_city          String    @default("Málaga, 29001") @map("company_city")
+  company_phone         String    @default("+34 600 000 000") @map("company_phone")
+  company_email         String    @default("info@alquiloscooter.com") @map("company_email")
+  company_website       String?   @map("company_website")
+  
+  // Logo y branding
+  logo_url              String?   @map("logo_url")  // URL del logo en S3
+  pwa_icon_url          String?   @map("pwa_icon_url")  // URL del icono PWA en S3
+  favicon_url           String?   @map("favicon_url")  // URL del favicon en S3
+  primary_color         String    @default("#2563eb") @map("primary_color")  // Color principal
+  secondary_color       String    @default("#1e40af") @map("secondary_color")  // Color secundario
+  
+  // Configuración de documentos
+  factura_prefix        String    @default("FACT") @map("factura_prefix")
+  ticket_prefix         String    @default("TICK") @map("ticket_prefix")
+  factura_series        String    @default("2025") @map("factura_series")
+  
+  // Información bancaria para facturas
+  bank_name             String?   @map("bank_name")
+  bank_iban             String?   @map("bank_iban")
+  bank_swift            String?   @map("bank_swift")
+  
+  // Configuración fiscal
+  iva_rate              Float     @default(0.21) @map("iva_rate")  // 21% IVA por defecto
+  
+  // Textos personalizables
+  invoice_footer_text   String?   @map("invoice_footer_text") @db.Text
+  terms_and_conditions  String?   @map("terms_and_conditions") @db.Text
+  
+  // Configuración SMTP para envío automático de emails
+  smtp_host             String?   @map("smtp_host")  // ej: mail.alquiloscooter.com
+  smtp_port             Int?      @default(587) @map("smtp_port")  // 587 para TLS, 465 para SSL
+  smtp_secure           Boolean?  @default(false) @map("smtp_secure")  // true para SSL, false para TLS/STARTTLS
+  smtp_user             String?   @map("smtp_user")  // Usuario SMTP
+  smtp_password         String?   @map("smtp_password")  // Contraseña SMTP (encriptada)
+  smtp_from_name        String?   @map("smtp_from_name")  // Nombre que aparece como remitente
+  smtp_from_email       String?   @map("smtp_from_email")  // Email remitente
+  
+  // Configuración WhatsApp Business API
+  whatsapp_business_phone String?   @map("whatsapp_business_phone")  // Número de WhatsApp Business
+  whatsapp_api_key      String?   @map("whatsapp_api_key")  // API Key de WhatsApp Business (encriptada)
+  whatsapp_api_url      String?   @map("whatsapp_api_url")  // URL del endpoint de WhatsApp API
+  
+  // Configuración de Google Reviews
+  google_review_link    String?   @map("google_review_link")  // Enlace directo para dejar reseñas en Google
+  
+  // Metadatos
+  active                Boolean   @default(true) @map("active")
+  created_at            DateTime  @default(now()) @map("created_at")
+  updated_at            DateTime  @updatedAt @map("updated_at")
+  
+  @@map("company_config")
+}
+
+// Enums
+enum UserStatus {
+  T // True/Active
+  F // False/Inactive
+}
+
+enum ExpensePaidBy {
+  OWNER        // Pagado por el propietario/gestor
+  WORKSHOP     // Pagado por el taller (a facturar)
+  THIRD_PARTY  // Pagado por tercero
+}
+
+// Tabla de Proveedores de Repuestos
+model Supplier {
+  id              Int       @id @default(autoincrement()) @map("id")
+  name            String    @unique @map("name")  // Nombre único del proveedor
+  contact_person  String?   @map("contact_person")
+  phone           String?   @map("phone")
+  email           String?   @map("email")
+  address         String?   @map("address")
+  notes           String?   @map("notes") @db.Text
+  is_active       Boolean   @default(true) @map("is_active")
+  
+  // Relación con repuestos
+  spare_parts     CarRentalSpareParts[]
+  
+  created_at      DateTime  @default(now()) @map("created_at")
+  updated_at      DateTime  @updatedAt @map("updated_at")
+  
+  @@map("suppliers")
+}
+
+// ==========================================
+// SISTEMA DE AFILIADOS COMPLETO
+// ==========================================
+model AffiliateProfile {
+  id                        Int       @id @default(autoincrement()) @map("id")
+  user_id                   Int       @unique @map("user_id")  // Relación 1:1 con usuario
+  
+  // Información básica del negocio
+  business_name             String    @map("business_name")  // Nombre comercial / Empresa
+  contact_person_primary    String    @map("contact_person_primary")  // Persona de contacto principal
+  contact_person_secondary  String?   @map("contact_person_secondary")  // Persona de contacto secundaria (opcional)
+  
+  // Contacto
+  email_primary             String    @map("email_primary")  // Email principal
+  email_secondary           String?   @map("email_secondary")  // Email secundario (opcional)
+  phone_primary             String    @map("phone_primary")  // Teléfono principal
+  phone_secondary           String?   @map("phone_secondary")  // Teléfono secundario (opcional)
+  
+  // Dirección
+  address_street            String?   @map("address_street")  // Calle y número
+  address_city              String?   @map("address_city")  // Ciudad
+  address_state             String?   @map("address_state")  // Provincia/Estado
+  address_postal_code       String?   @map("address_postal_code")  // Código postal
+  address_country           String    @default("España") @map("address_country")  // País
+  
+  // Datos fiscales
+  tax_id                    String?   @map("tax_id")  // NIF/CIF
+  legal_name                String?   @map("legal_name")  // Razón social (puede ser diferente al nombre comercial)
+  
+  // Dirección fiscal (si es diferente)
+  fiscal_address_street     String?   @map("fiscal_address_street")
+  fiscal_address_city       String?   @map("fiscal_address_city")
+  fiscal_address_state      String?   @map("fiscal_address_state")
+  fiscal_address_postal_code String?  @map("fiscal_address_postal_code")
+  fiscal_address_country    String?   @map("fiscal_address_country")
+  
+  // Categorización
+  affiliate_type            AffiliateType @default(INDIVIDUAL) @map("affiliate_type")  // Tipo: Hotel, Agencia, Individual, etc.
+  affiliate_category        AffiliateCategory @default(STANDARD) @map("affiliate_category")  // Nivel/Categoría
+  
+  // Comisiones
+  commission_percentage     Decimal   @default(10.0) @map("commission_percentage") @db.Decimal(5, 2)  // % de comisión
+  payment_method            PaymentMethod? @map("payment_method")  // Método de pago preferido
+  bank_account              String?   @map("bank_account")  // Número de cuenta bancaria (IBAN)
+  paypal_email              String?   @map("paypal_email")  // Email de PayPal (si aplica)
+  
+  // Personalización del widget (para futuro)
+  widget_custom_name        String?   @map("widget_custom_name")  // Nombre personalizado para el widget
+  widget_show_branding      Boolean   @default(true) @map("widget_show_branding")  // Mostrar "by Alquiloscooter"
+  widget_custom_color       String?   @map("widget_custom_color")  // Color personalizado (hex)
+  widget_custom_logo_url    String?   @map("widget_custom_logo_url")  // Logo personalizado
+  
+  // Control y estado
+  status                    AffiliateStatus @default(PENDING) @map("status")  // Estado del afiliado
+  notes                     String?   @map("notes") @db.Text  // Notas internas
+  
+  // Auditoría
+  created_at                DateTime  @default(now()) @map("created_at")
+  updated_at                DateTime  @updatedAt @map("updated_at")
+  created_by                Int?      @map("created_by")  // Usuario que creó el registro
+  
+  // Relación con usuario
+  user                      CarRentalUsers @relation("AffiliateUser", fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@index([affiliate_type])
+  @@index([affiliate_category])
+  @@index([status])
+  @@map("affiliate_profiles")
+}
+
+// Enums para afiliados
+enum AffiliateType {
+  HOTEL           // Hotel, hostal, resort
+  AGENCY          // Agencia de viajes, tour operador
+  RESTAURANT      // Restaurante, bar, cafetería
+  SHOP            // Tienda, comercio local
+  INDIVIDUAL      // Persona individual
+  OTHER           // Otros tipos
+}
+
+enum AffiliateCategory {
+  PLATINUM        // Platino: Comisión máxima, personalización completa
+  GOLD            // Oro: Comisión alta, algunas personalizaciones
+  SILVER          // Plata: Comisión media
+  STANDARD        // Estándar: Comisión base
+}
+
+enum AffiliateStatus {
+  PENDING         // Pendiente de aprobación
+  ACTIVE          // Activo
+  INACTIVE        // Inactivo (temporal)
+  SUSPENDED       // Suspendido
+  REJECTED        // Rechazado
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER   // Transferencia bancaria
+  PAYPAL          // PayPal
+  CASH            // Efectivo
+  CHECK           // Cheque
+  OTHER           // Otro método
+}
+
+
+// ==========================================
+// PRESUPUESTOS FINANCIEROS
+// ==========================================
+model FinancialBudget {
+  id                    Int                   @id @default(autoincrement())
+  year                  Int                   @map("year")                    // Año del presupuesto (2025)
+  month                 Int                   @map("month")                   // Mes (1-12)
+  budgeted_income       Decimal               @default(0) @map("budgeted_income") @db.Decimal(10, 2) // Ingresos presupuestados
+  budgeted_expenses     Decimal               @default(0) @map("budgeted_expenses") @db.Decimal(10, 2) // Gastos presupuestados
+  notes                 String?               @map("notes") @db.Text          // Notas adicionales
+  created_at            DateTime              @default(now()) @map("created_at")
+  updated_at            DateTime              @updatedAt @map("updated_at")
+  created_by            Int?                  @map("created_by")              // Usuario que creó el presupuesto
+  
+  // Relación con líneas detalladas
+  lineItems             BudgetLineItem[]
+  
+  // Constraint: Solo un presupuesto por año-mes
+  @@unique([year, month], map: "unique_year_month_budget")
+  @@index([year, month], map: "idx_year_month_budget")
+  @@map("financial_budgets")
+}
+
+// Líneas detalladas de presupuesto (partidas)
+model BudgetLineItem {
+  id                    Int                   @id @default(autoincrement())
+  budget_id             Int                   @map("budget_id")              // FK a FinancialBudget
+  type                  String                @map("type")                   // 'income' o 'expense'
+  category              String                @map("category")               // Categoría de la partida
+  subcategory           String?               @map("subcategory")            // Subcategoría opcional
+  budgeted_amount       Decimal               @default(0) @map("budgeted_amount") @db.Decimal(10, 2)
+  notes                 String?               @map("notes") @db.Text
+  created_at            DateTime              @default(now()) @map("created_at")
+  updated_at            DateTime              @updatedAt @map("updated_at")
+  
+  // Relación con presupuesto principal
+  budget                FinancialBudget       @relation(fields: [budget_id], references: [id], onDelete: Cascade)
+  
+  @@index([budget_id], map: "idx_budget_line_budget_id")
+  @@index([type], map: "idx_budget_line_type")
+  @@index([category], map: "idx_budget_line_category")
+  @@map("budget_line_items")
+}

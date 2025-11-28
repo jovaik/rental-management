@@ -15,7 +15,7 @@ async function getBooking(id: string, tenantId: string) {
       tenantId,
     },
     include: {
-      item: {
+      Item: {
         select: {
           id: true,
           name: true,
@@ -25,7 +25,7 @@ async function getBooking(id: string, tenantId: string) {
           attributes: true,
         },
       },
-      customer: {
+      Customer: {
         select: {
           id: true,
           name: true,

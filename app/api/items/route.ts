@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
     // Create item
     const item = await prisma.item.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         type: validatedData.type,
         name: validatedData.name,
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
         status: validatedData.status,
         attributes: validatedData.attributes,
         photos: validatedData.photos,
+        updatedAt: new Date(),
       },
     });
 

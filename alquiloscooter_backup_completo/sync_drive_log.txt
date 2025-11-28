@@ -1,0 +1,281 @@
+🔄 SINCRONIZACIÓN MASIVA DE DOCUMENTOS A GOOGLE DRIVE
+
+════════════════════════════════════════════════════════════════════════════════
+📊 Total de reservas con carpeta Drive: 29
+
+
+📁 202511070003
+   Carpeta: https://drive.google.com/drive/folders/1yByCWPRO-j6RajZ2icsDRDCFoTQO827Q
+   ✅ Inspeccion-Entrada-Frontal.jpg
+   ✅ Inspeccion-Entrada-Izquierda.jpg
+   ✅ Inspeccion-Entrada-Trasera.jpg
+   ✅ Inspeccion-Entrada-Derecha.jpg
+   ✅ Inspeccion-Entrada-Odometro.jpg
+
+📁 202511070002
+   Carpeta: https://drive.google.com/drive/folders/1DBK52qCXe7VXWJU1qofK5EE9JiZufjO8
+   ✅ Carnet_Conducir_Frontal.jpg
+   ✅ Carnet_Conducir_Trasero.jpg
+   ✅ DNI_Frontal.jpg
+   ✅ DNI_Trasero.jpg
+   ✅ Inspeccion-Entrada-1-Frontal.jpg
+   ✅ Inspeccion-Entrada-1-Izquierda.jpg
+   ✅ Inspeccion-Entrada-1-Trasera.jpg
+   ✅ Inspeccion-Entrada-1-Derecha.jpg
+   ✅ Inspeccion-Entrada-1-Odometro.jpg
+   ✅ Inspeccion-Entrada-2-Frontal.jpg
+   ✅ Inspeccion-Entrada-2-Izquierda.jpg
+   ✅ Inspeccion-Entrada-2-Trasera.jpg
+   ✅ Inspeccion-Entrada-2-Derecha.jpg
+   ✅ Inspeccion-Entrada-2-Odometro.jpg
+
+📁 202511070001
+   Carpeta: https://drive.google.com/drive/folders/1Ob6ykxq2c9N5D1KyNCdS20K-eFdc2bEr
+   ℹ️  Sin documentos para copiar
+
+📁 202511060001
+   Carpeta: https://drive.google.com/drive/folders/1TV6GFlS_q4deQZqnQ9WdPgIRmpS0_z5e
+   ✅ Carnet_Conducir_Frontal.jpg
+   ✅ Carnet_Conducir_Trasero.jpg
+   ✅ DNI_Frontal.jpg
+   ✅ DNI_Trasero.jpg
+   ✅ Inspeccion-Entrada-1-Frontal.jpg
+   ✅ Inspeccion-Entrada-1-Izquierda.jpg
+   ✅ Inspeccion-Entrada-1-Trasera.jpg
+   ✅ Inspeccion-Entrada-1-Derecha.jpg
+   ✅ Inspeccion-Entrada-1-Odometro.jpg
+   ✅ Inspeccion-Entrada-2-Frontal.jpg
+   ✅ Inspeccion-Entrada-2-Izquierda.jpg
+   ✅ Inspeccion-Entrada-2-Trasera.jpg
+   ✅ Inspeccion-Entrada-2-Derecha.jpg
+   ✅ Inspeccion-Entrada-2-Odometro.jpg
+   ✅ Inspeccion-Entrada-3-Frontal.jpg
+   ✅ Inspeccion-Entrada-3-Izquierda.jpg
+   ✅ Inspeccion-Entrada-3-Trasera.jpg
+   ✅ Inspeccion-Entrada-3-Derecha.jpg
+   ✅ Inspeccion-Entrada-3-Odometro.jpg
+   ✅ Inspeccion-Entrada-4-Frontal.jpg
+   ✅ Inspeccion-Entrada-4-Izquierda.jpg
+   ✅ Inspeccion-Entrada-4-Trasera.jpg
+   ✅ Inspeccion-Entrada-4-Derecha.jpg
+   ✅ Inspeccion-Entrada-4-Odometro.jpg
+
+📁 202511010001
+   Carpeta: https://drive.google.com/drive/folders/1mqBp95XDoGIchCD5hnRsY49LE2aPdRU1
+   ✅ Carnet_Conducir_Frontal.jpg
+   ✅ Carnet_Conducir_Trasero.jpg
+   ✅ DNI_Frontal.jpg
+   ✅ DNI_Trasero.jpg
+   ✅ Inspeccion-Entrada-Frontal.jpg
+   ✅ Inspeccion-Entrada-Izquierda.jpg
+   ✅ Inspeccion-Entrada-Trasera.jpg
+   ✅ Inspeccion-Entrada-Derecha.jpg
+   ✅ Inspeccion-Entrada-Odometro.jpg
+
+📁 202511050002
+   Carpeta: https://drive.google.com/drive/folders/1JlH-PrPnkyWViVJBka2Km0tfLV_TMLm_
+   ✅ Carnet_Conducir_Frontal.jpg
+   ✅ Carnet_Conducir_Trasero.jpg
+   ✅ DNI_Frontal.jpg
+   ✅ DNI_Trasero.jpg
+   ✅ Inspeccion-Entrada-Frontal.jpg
+   ✅ Inspeccion-Entrada-Izquierda.jpg
+   ✅ Inspeccion-Entrada-Trasera.jpg
+   ✅ Inspeccion-Entrada-Derecha.jpg
+   ✅ Inspeccion-Entrada-Odometro.jpg
+
+📁 202511050001
+   Carpeta: https://drive.google.com/drive/folders/18JVWb4llgd-h1P6eLO5CVwZBlrICcZ33
+   ✅ Carnet_Conducir_Frontal.jpg
+   ✅ Carnet_Conducir_Trasero.jpg
+   ✅ DNI_Frontal.jpg
+   ✅ DNI_Trasero.jpg
+   ✅ Inspeccion-Entrada-Frontal.jpg
+   ✅ Inspeccion-Entrada-Izquierda.jpg
+   ✅ Inspeccion-Entrada-Trasera.jpg
+   ✅ Inspeccion-Entrada-Derecha.jpg
+   ✅ Inspeccion-Entrada-Odometro.jpg
+
+📁 202511040001
+   Carpeta: https://drive.google.com/drive/folders/1ZauOR5PpZLcRbkKPhRnSdW7m6o-WeLtw
+   ✅ Carnet_Conducir_Frontal.jpg
+   ✅ Carnet_Conducir_Trasero.jpg
+   ✅ DNI_Frontal.jpg
+   ✅ DNI_Trasero.jpg
+   ✅ Inspeccion-Salida-1-Frontal.jpg
+   ✅ Inspeccion-Salida-1-Izquierda.jpg
+   ✅ Inspeccion-Salida-1-Trasera.jpg
+   ✅ Inspeccion-Salida-1-Derecha.jpg
+   ✅ Inspeccion-Salida-1-Odometro.jpg
+   ✅ Inspeccion-Entrada-2-Frontal.jpg
+   ✅ Inspeccion-Entrada-2-Izquierda.jpg
+   ✅ Inspeccion-Entrada-2-Trasera.jpg
+   ✅ Inspeccion-Entrada-2-Derecha.jpg
+   ✅ Inspeccion-Entrada-2-Odometro.jpg
+
+📁 RES-54
+   Carpeta: https://drive.google.com/drive/folders/1b9aXw7Lc_Rep363iFzOpAY1aGLNpYA9X
+   ℹ️  Sin documentos para copiar
+
+📁 RES-53
+   Carpeta: https://drive.google.com/drive/folders/1bB8cy3h9J30rIndnPfnLMhWDV27WK3am
+   ℹ️  Sin documentos para copiar
+
+📁 RES-52
+   Carpeta: https://drive.google.com/drive/folders/18wzjSOR8XvhV09RgLpTJt2Bv15AVAVRj
+   ℹ️  Sin documentos para copiar
+
+📁 RES-51
+   Carpeta: https://drive.google.com/drive/folders/1-fD3zWBEtRBPJwq7TnxoABQmirtHEjDD
+   ℹ️  Sin documentos para copiar
+
+📁 RES-50
+   Carpeta: https://drive.google.com/drive/folders/1OEbv0cGMVkOwlDBpv3UXK6J3O75iRA8W
+   ℹ️  Sin documentos para copiar
+
+📁 RES-49
+   Carpeta: https://drive.google.com/drive/folders/1x9kCSzUEN7BudmONyYQdBrDL5SM_Kz3q
+   ℹ️  Sin documentos para copiar
+
+📁 RES-48
+   Carpeta: https://drive.google.com/drive/folders/18X4enZ5WM_gEqP2WHS5GyPA2H4HnD3_f
+   ℹ️  Sin documentos para copiar
+
+📁 RES-47
+   Carpeta: https://drive.google.com/drive/folders/1RKGiudwL5f7L5QJLjJU5cNjo6kXDZd02
+   ℹ️  Sin documentos para copiar
+
+📁 RES-46
+   Carpeta: https://drive.google.com/drive/folders/1-iHu5oYmEhdaMWGvvuyopiKHC9sZeBSG
+   ℹ️  Sin documentos para copiar
+
+📁 RES-45
+   Carpeta: https://drive.google.com/drive/folders/1TeIfRWbsvEOihy4w8EqL_dRad7S0Pf1o
+   ℹ️  Sin documentos para copiar
+
+📁 RES-44
+   Carpeta: https://drive.google.com/drive/folders/1fJ8H6HhJXoHdj-kjd257MWUIx31ceLcy
+   ℹ️  Sin documentos para copiar
+
+📁 RES-43
+   Carpeta: https://drive.google.com/drive/folders/1fYOmYkdWYU_aizWduVBKZySqsZ8EMNh9
+   ℹ️  Sin documentos para copiar
+
+📁 RES-42
+   Carpeta: https://drive.google.com/drive/folders/1VGagDsJbTmD4KRcXDB5PalFekMe_TBjq
+   ℹ️  Sin documentos para copiar
+
+📁 202510270001
+   Carpeta: https://drive.google.com/drive/folders/19jSU9dUaTh_246OFFJs1Mq2Pw6Uwobw4
+   ℹ️  Sin documentos para copiar
+
+📁 202510260002
+   Carpeta: https://drive.google.com/drive/folders/1JyGA1IGVXoCOb4pOKb8Puj5cm5BT_HQY
+   ℹ️  Sin documentos para copiar
+
+📁 202510260001
+   Carpeta: https://drive.google.com/drive/folders/1ArM-o_9GWEhSKVa6pSdLCtFyB82tA7aw
+   ✅ Inspeccion-Entrada-1-Frontal.jpg
+   ✅ Inspeccion-Entrada-1-Izquierda.jpg
+   ✅ Inspeccion-Entrada-1-Trasera.jpg
+   ✅ Inspeccion-Entrada-1-Derecha.jpg
+   ✅ Inspeccion-Entrada-1-Odometro.jpg
+   ✅ Inspeccion-Entrada-2-Frontal.jpg
+   ✅ Inspeccion-Entrada-2-Izquierda.jpg
+   ✅ Inspeccion-Entrada-2-Trasera.jpg
+   ✅ Inspeccion-Entrada-2-Derecha.jpg
+   ✅ Inspeccion-Entrada-2-Odometro.jpg
+   ✅ Inspeccion-Entrada-3-Frontal.jpg
+   ✅ Inspeccion-Entrada-3-Izquierda.jpg
+   ✅ Inspeccion-Entrada-3-Trasera.jpg
+   ✅ Inspeccion-Entrada-3-Derecha.jpg
+   ✅ Inspeccion-Entrada-3-Odometro.jpg
+   ✅ Inspeccion-Entrada-4-Frontal.jpg
+   ✅ Inspeccion-Entrada-4-Izquierda.jpg
+   ✅ Inspeccion-Entrada-4-Trasera.jpg
+   ✅ Inspeccion-Entrada-4-Derecha.jpg
+   ✅ Inspeccion-Entrada-4-Odometro.jpg
+   ✅ Inspeccion-Entrada-5-Frontal.jpg
+   ✅ Inspeccion-Entrada-5-Izquierda.jpg
+   ✅ Inspeccion-Entrada-5-Trasera.jpg
+   ✅ Inspeccion-Entrada-5-Derecha.jpg
+   ✅ Inspeccion-Entrada-5-Odometro.jpg
+   ✅ Inspeccion-Entrada-6-Frontal.jpg
+   ✅ Inspeccion-Entrada-6-Izquierda.jpg
+   ✅ Inspeccion-Entrada-6-Trasera.jpg
+   ✅ Inspeccion-Entrada-6-Derecha.jpg
+   ✅ Inspeccion-Entrada-6-Odometro.jpg
+
+📁 202510240001
+   Carpeta: https://drive.google.com/drive/folders/1h9Hvu7IiGviu6m_G8G-npyfMjf7pNZgL
+   ✅ Carnet_Conducir_Frontal.jpg
+   ✅ DNI_Frontal.jpg
+   ✅ DNI_Trasero.jpg
+   ✅ Inspeccion-Entrada-1-Frontal.jpg
+   ✅ Inspeccion-Entrada-1-Izquierda.jpg
+   ✅ Inspeccion-Entrada-1-Trasera.jpg
+   ✅ Inspeccion-Entrada-1-Derecha.jpg
+   ✅ Inspeccion-Entrada-1-Odometro.jpg
+   ✅ Inspeccion-Entrada-2-Frontal.jpg
+   ✅ Inspeccion-Entrada-2-Izquierda.jpg
+   ✅ Inspeccion-Entrada-2-Trasera.jpg
+   ✅ Inspeccion-Entrada-2-Derecha.jpg
+   ✅ Inspeccion-Entrada-2-Odometro.jpg
+   ✅ Inspeccion-Entrada-3-Frontal.jpg
+   ✅ Inspeccion-Entrada-3-Izquierda.jpg
+   ✅ Inspeccion-Entrada-3-Trasera.jpg
+   ✅ Inspeccion-Entrada-3-Derecha.jpg
+   ✅ Inspeccion-Entrada-3-Odometro.jpg
+   ✅ Inspeccion-Entrada-4-Frontal.jpg
+   ✅ Inspeccion-Entrada-4-Izquierda.jpg
+   ✅ Inspeccion-Entrada-4-Trasera.jpg
+   ✅ Inspeccion-Entrada-4-Derecha.jpg
+   ✅ Inspeccion-Entrada-4-Odometro.jpg
+   ✅ Inspeccion-Entrada-5-Frontal.jpg
+   ✅ Inspeccion-Entrada-5-Izquierda.jpg
+   ✅ Inspeccion-Entrada-5-Trasera.jpg
+   ✅ Inspeccion-Entrada-5-Derecha.jpg
+   ✅ Inspeccion-Entrada-5-Odometro.jpg
+   ✅ Inspeccion-Entrada-6-Frontal.jpg
+   ✅ Inspeccion-Entrada-6-Izquierda.jpg
+   ✅ Inspeccion-Entrada-6-Trasera.jpg
+   ✅ Inspeccion-Entrada-6-Derecha.jpg
+   ✅ Inspeccion-Entrada-6-Odometro.jpg
+   ✅ Inspeccion-Entrada-7-Frontal.jpg
+   ✅ Inspeccion-Entrada-7-Izquierda.jpg
+   ✅ Inspeccion-Entrada-7-Trasera.jpg
+   ✅ Inspeccion-Entrada-7-Derecha.jpg
+   ✅ Inspeccion-Entrada-7-Odometro.jpg
+   ✅ Inspeccion-Entrada-8-Frontal.jpg
+   ✅ Inspeccion-Entrada-8-Izquierda.jpg
+   ✅ Inspeccion-Entrada-8-Trasera.jpg
+   ✅ Inspeccion-Entrada-8-Derecha.jpg
+   ✅ Inspeccion-Entrada-8-Odometro.jpg
+
+📁 202510230002
+   Carpeta: https://drive.google.com/drive/folders/13FbcQgs99sE5VORRqxLV_b7Y3YgQVJKI
+   ✅ Inspeccion-Entrada-Frontal.jpg
+   ✅ Inspeccion-Entrada-Izquierda.jpg
+   ✅ Inspeccion-Entrada-Trasera.jpg
+   ✅ Inspeccion-Entrada-Derecha.jpg
+   ✅ Inspeccion-Entrada-Odometro.jpg
+
+📁 202510230001
+   Carpeta: https://drive.google.com/drive/folders/1Xy2o6qSQhwzSyHATjpEFNCtwfcq1XCEP
+   ℹ️  Sin documentos para copiar
+
+📁 RES-18
+   Carpeta: https://drive.google.com/drive/folders/1VGagDsJbTmD4KRcXDB5PalFekMe_TBjq
+   ℹ️  Sin documentos para copiar
+
+📁 202510210001
+   Carpeta: https://drive.google.com/drive/folders/1Ck_LORc7U0bZMofgblBPA4Om9oxMuX8V
+   ℹ️  Sin documentos para copiar
+
+════════════════════════════════════════════════════════════════════════════════
+
+✅ SINCRONIZACIÓN COMPLETADA
+
+   📤 Archivos subidos: 162
+   ⏭️  Reservas sin docs: 19
+   ❌ Errores: 0

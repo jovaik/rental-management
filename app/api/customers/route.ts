@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         _count: {
-          select: { bookings: true },
+          select: { Booking: true },
         },
       },
       orderBy: {
@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
     // Create customer
     const customer = await prisma.customer.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         name: data.name,
         email: data.email,
@@ -110,6 +111,7 @@ export async function POST(request: NextRequest) {
         city: data.city,
         country: data.country,
         notes: data.notes,
+        updatedAt: new Date(),
       },
     });
 

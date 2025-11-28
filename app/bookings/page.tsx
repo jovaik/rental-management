@@ -13,7 +13,7 @@ async function getBookings(tenantId: string) {
   const bookings = await prisma.booking.findMany({
     where: { tenantId },
     include: {
-      item: {
+      Item: {
         select: {
           id: true,
           name: true,
@@ -22,7 +22,7 @@ async function getBookings(tenantId: string) {
           photos: true,
         },
       },
-      customer: {
+      Customer: {
         select: {
           id: true,
           name: true,

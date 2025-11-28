@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     const bookings = await prisma.booking.findMany({
       where,
       include: {
-        item: {
+        Item: {
           select: {
             id: true,
             name: true,
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
             photos: true,
           },
         },
-        customer: {
+        Customer: {
           select: {
             id: true,
             name: true,
@@ -186,6 +186,7 @@ export async function POST(request: NextRequest) {
     // Create booking
     const booking = await prisma.booking.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         itemId: data.itemId,
         customerId: data.customerId,
@@ -195,10 +196,11 @@ export async function POST(request: NextRequest) {
         deposit: data.deposit,
         notes: data.notes,
         status: 'PENDING',
+        updatedAt: new Date(),
       },
       include: {
-        item: true,
-        customer: true,
+        Item: true,
+        Customer: true,
       },
     });
 

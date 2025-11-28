@@ -15,13 +15,13 @@ interface Invoice {
   status: string;
   createdAt: string;
   pdfUrl?: string | null;
-  booking: {
-    customer: {
+  Booking: {
+    Customer: {
       id: string;
       name: string;
       email: string;
     };
-    item: {
+    Item: {
       id: string;
       name: string;
       type: string;
@@ -242,15 +242,15 @@ export function InvoiceList({ initialInvoices, initialStats }: InvoiceListProps)
                     <td className="px-4 py-3">
                       <div>
                         <div className="font-medium">
-                          {invoice.booking.customer.name}
+                          {invoice.Booking.Customer.name}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {invoice.booking.customer.email}
+                          {invoice.Booking.Customer.email}
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-sm">{invoice.booking.item.name}</div>
+                      <div className="text-sm">{invoice.Booking.Item.name}</div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium">

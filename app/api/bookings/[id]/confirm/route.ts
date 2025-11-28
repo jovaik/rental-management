@@ -48,8 +48,8 @@ export async function POST(
         tenantId,
       },
       include: {
-        customer: true,
-        item: true,
+        Customer: true,
+        Item: true,
       },
     });
 
@@ -109,12 +109,14 @@ export async function POST(
       // Create invoice
       const invoice = await tx.invoice.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId,
           bookingId: id,
           invoiceNumber,
           amount: booking.totalPrice,
           status: 'PENDING',
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          updatedAt: new Date(),
         },
       });
 
@@ -138,20 +140,20 @@ export async function POST(
           deposit: booking.deposit,
           notes: booking.notes,
           item: {
-            name: booking.item.name,
-            type: booking.item.type,
-            basePrice: booking.item.basePrice,
+            name: booking.Item.name,
+            type: booking.Item.type,
+            basePrice: booking.Item.basePrice,
           },
         },
         customer: {
-          name: booking.customer.name,
-          email: booking.customer.email,
-          phone: booking.customer.phone,
-          documentType: booking.customer.documentType,
-          documentNumber: booking.customer.documentNumber,
-          address: booking.customer.address,
-          city: booking.customer.city,
-          country: booking.customer.country,
+          name: booking.Customer.name,
+          email: booking.Customer.email,
+          phone: booking.Customer.phone,
+          documentType: booking.Customer.documentType,
+          documentNumber: booking.Customer.documentNumber,
+          address: booking.Customer.address,
+          city: booking.Customer.city,
+          country: booking.Customer.country,
         },
         tenant: {
           name: tenant.name,

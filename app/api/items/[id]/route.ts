@@ -168,7 +168,7 @@ export async function DELETE(
         tenantId,
       },
       include: {
-        bookings: true,
+        Booking: true,
       },
     });
 
@@ -180,7 +180,7 @@ export async function DELETE(
     }
 
     // Check if item has bookings
-    if (existingItem.bookings && existingItem.bookings.length > 0) {
+    if (existingItem.Booking && existingItem.Booking.length > 0) {
       return NextResponse.json(
         { error: 'Cannot delete item with existing bookings' },
         { status: 400 }

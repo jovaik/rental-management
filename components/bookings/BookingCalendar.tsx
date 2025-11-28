@@ -26,11 +26,11 @@ type Booking = {
   startDate: Date | string;
   endDate: Date | string;
   status: string;
-  item: {
+  Item: {
     name: string;
     type: string;
   };
-  customer: {
+  Customer: {
     name: string;
   };
 };
@@ -76,7 +76,7 @@ export default function BookingCalendar() {
   const events: CalendarEvent[] = useMemo(() => {
     return bookings.map((booking) => ({
       id: booking.id,
-      title: `${booking.item.name} - ${booking.customer.name}`,
+      title: `${booking.Item.name} - ${booking.Customer.name}`,
       start: new Date(booking.startDate),
       end: new Date(booking.endDate),
       resource: booking,

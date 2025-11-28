@@ -1,0 +1,920 @@
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, User, Phone, Mail, Car, Clock, Calculator, Search, ChevronRight, Check, CheckCircle2, AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+
+interface Vehicle {
+  id: string;
+  registration_number: string;
+  make: string;
+  model: string;
+  status: string;
+  type?: string;
+}
+
+interface Customer {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone: string;
+  address?: string;
+  city?: string;
+}
+
+interface WorkingHours {
+  day_of_week: number;
+  is_working_day: boolean;
+  opening_time: string;
+  closing_time: string;
+}
+
+interface NewReservationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onReservationCreated: () => void;
+  preselectedVehicleId?: string;
+  preselectedDate?: Date;
+}
+
+export function NewReservationDialog({
+  open,
+  onOpenChange,
+  onReservationCreated,
+  preselectedVehicleId,
+  preselectedDate
+}: NewReservationDialogProps) {
+  // Estados principales
+  const [currentStep, setCurrentStep] = useState<'dates' | 'vehicle' | 'customer' | 'confirm'>('dates');
+  const [loading, setLoading] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHours[]>([]);
+  const [includeInsurance, setIncludeInsurance] = useState(false);
+  const [calculatedPrice, setCalculatedPrice] = useState<any>(null);
+  const [calculating, setCalculating] = useState(false);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  
+  // Estados para búsqueda de cliente
+  const [customerSearchMode, setCustomerSearchMode] = useState<'search' | 'new'>('search');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  
+  const [formData, setFormData] = useState({
+    // Paso 1: Fechas
+    pickup_date: preselectedDate ? preselectedDate.toISOString().split('T')[0] : '',
+    pickup_time: '09:00',
+    return_date: '',
+    return_time: '19:00',
+    // Paso 2: Vehículo
+    car_id: preselectedVehicleId || '',
+    // Paso 3: Cliente
+    customer_id: '',
+    customer_first_name: '',
+    customer_last_name: '',
+    customer_email: '',
+    customer_phone: '',
+    customer_address: '',
+    customer_city: '',
+    // Paso 4: Confirmación
+    total_price: '',
+    status: 'confirmed'
+  });
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Cargar vehículos
+        const vehiclesRes = await fetch('/api/vehicles');
+        if (vehiclesRes.ok) {
+          const vehiclesData = await vehiclesRes.json();
+          setVehicles(vehiclesData);
+        }
+
+        // Cargar clientes
+        const customersRes = await fetch('/api/bookings');
+        if (customersRes.ok) {
+          const bookingsData = await customersRes.json();
+          // Extraer clientes únicos de las reservas
+          const uniqueCustomers = new Map();
+          bookingsData.forEach((booking: any) => {
+            const key = booking.customer_email || booking.customer_phone;
+            if (key && !uniqueCustomers.has(key)) {
+              uniqueCustomers.set(key, {
+                id: booking.id.toString(),
+                first_name: booking.customer_name?.split(' ')[0] || '',
+                last_name: booking.customer_name?.split(' ').slice(1).join(' ') || '',
+                email: booking.customer_email || '',
+                phone: booking.customer_phone || '',
+              });
+            }
+          });
+          setAllCustomers(Array.from(uniqueCustomers.values()));
+        }
+
+        // Cargar horarios
+        const hoursRes = await fetch('/api/working-hours');
+        if (hoursRes.ok) {
+          const hoursData = await hoursRes.json();
+          setWorkingHours(hoursData);
+          
+          const today = new Date().getDay();
+          const todayHours = hoursData.find((h: WorkingHours) => h.day_of_week === today);
+          if (todayHours) {
+            setFormData(prev => ({
+              ...prev,
+              pickup_time: todayHours.opening_time,
+              return_time: todayHours.closing_time
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+    
+    if (open) {
+      loadData();
+      // Resetear al abrir
+      setCurrentStep('dates');
+      setSelectedCustomer(null);
+      setCustomerSearch('');
+      setCustomerSearchMode('search');
+    }
+  }, [open]);
+
+  // Update form when preselected values change
+  useEffect(() => {
+    if (preselectedVehicleId) {
+      setFormData(prev => ({ ...prev, car_id: preselectedVehicleId }));
+      // Si hay vehículo preseleccionado, ir directamente al paso de fechas
+      setCurrentStep('dates');
+    }
+    if (preselectedDate) {
+      setFormData(prev => ({ 
+        ...prev, 
+        pickup_date: preselectedDate.toISOString().split('T')[0] 
+      }));
+    }
+  }, [preselectedVehicleId, preselectedDate]);
+
+  // Verificar disponibilidad de vehículos cuando cambien las fechas
+  const checkVehicleAvailability = async () => {
+    if (!formData.pickup_date || !formData.pickup_time || !formData.return_date || !formData.return_time) {
+      toast.error('Por favor completa todas las fechas y horarios');
+      return;
+    }
+
+    const pickupDateTime = new Date(`${formData.pickup_date}T${formData.pickup_time}:00`);
+    const returnDateTime = new Date(`${formData.return_date}T${formData.return_time}:00`);
+
+    if (returnDateTime <= pickupDateTime) {
+      toast.error('La fecha de devolución debe ser posterior a la de recogida');
+      return;
+    }
+
+    try {
+      setCheckingAvailability(true);
+      
+      // Obtener todas las reservas en ese rango de fechas
+      const bookingsRes = await fetch(
+        `/api/bookings?start=${pickupDateTime.toISOString()}&end=${returnDateTime.toISOString()}`
+      );
+      
+      if (bookingsRes.ok) {
+        const bookings = await bookingsRes.json();
+        const reservedCarIds = new Set(bookings.map((b: any) => b.car_id?.toString()).filter(Boolean));
+        
+        // Filtrar vehículos disponibles (status 'T' = activo)
+        const available = vehicles.filter(v => !reservedCarIds.has(v.id) && v.status === 'T');
+        
+        if (available.length === 0) {
+          toast.error('No hay vehículos disponibles para esas fechas');
+          setAvailableVehicles([]);
+        } else {
+          setAvailableVehicles(available);
+          toast.success(`${available.length} vehículo(s) disponible(s)`);
+          setCurrentStep('vehicle');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking availability:', error);
+      toast.error('Error verificando disponibilidad');
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  // Calcular precio cuando se selecciona un vehículo
+  const calculatePrice = async (carId: string) => {
+    try {
+      setCalculating(true);
+      
+      const pickupDateTime = `${formData.pickup_date}T${formData.pickup_time}:00`;
+      const returnDateTime = `${formData.return_date}T${formData.return_time}:00`;
+
+      const response = await fetch('/api/pricing-groups/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          car_id: carId,
+          pickup_datetime: pickupDateTime,
+          return_datetime: returnDateTime,
+          include_insurance: includeInsurance,
+        }),
+      });
+
+      if (response.ok) {
+        const priceData = await response.json();
+        setCalculatedPrice(priceData);
+        setFormData(prev => ({ ...prev, total_price: priceData.total }));
+      }
+    } catch (error) {
+      console.error('Error calculating price:', error);
+      toast.error('Error calculando precio');
+    } finally {
+      setCalculating(false);
+    }
+  };
+
+  // Seleccionar vehículo
+  const handleVehicleSelect = (vehicleId: string) => {
+    setFormData(prev => ({ ...prev, car_id: vehicleId }));
+    calculatePrice(vehicleId);
+    setCurrentStep('customer');
+  };
+
+  // Buscar cliente
+  useEffect(() => {
+    if (customerSearch.trim()) {
+      const filtered = allCustomers.filter(c => 
+        c.first_name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        c.last_name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        c.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        c.phone.includes(customerSearch)
+      );
+      // Limitar a 5 resultados
+      setAllCustomers(filtered.slice(0, 5));
+    }
+  }, [customerSearch]);
+
+  // Seleccionar cliente existente
+  const handleCustomerSelect = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setFormData(prev => ({
+      ...prev,
+      customer_id: customer.id,
+      customer_first_name: customer.first_name,
+      customer_last_name: customer.last_name,
+      customer_email: customer.email || '',
+      customer_phone: customer.phone,
+      customer_address: customer.address || '',
+      customer_city: customer.city || '',
+    }));
+    setCustomerSearch('');
+  };
+
+  // Crear reserva
+  const handleSubmit = async () => {
+    // Validación final
+    if (!formData.car_id || !formData.pickup_date || !formData.return_date) {
+      toast.error('Faltan datos obligatorios');
+      return;
+    }
+
+    if (customerSearchMode === 'new' && (!formData.customer_first_name || !formData.customer_last_name || !formData.customer_phone)) {
+      toast.error('Por favor completa los datos del cliente (nombre, apellidos, teléfono)');
+      return;
+    }
+
+    if (customerSearchMode === 'search' && !selectedCustomer) {
+      toast.error('Por favor selecciona un cliente o crea uno nuevo');
+      return;
+    }
+
+    const pickupDateTime = new Date(`${formData.pickup_date}T${formData.pickup_time}:00`);
+    const returnDateTime = new Date(`${formData.return_date}T${formData.return_time}:00`);
+
+    try {
+      setLoading(true);
+      
+      // Si es cliente nuevo, NO necesitamos crear el customer por separado
+      // Lo enviamos todo en la reserva
+      const customerName = customerSearchMode === 'new'
+        ? `${formData.customer_first_name} ${formData.customer_last_name}`
+        : `${selectedCustomer?.first_name} ${selectedCustomer?.last_name}`;
+
+      const customerEmail = customerSearchMode === 'new' 
+        ? formData.customer_email 
+        : selectedCustomer?.email || '';
+
+      const customerPhone = customerSearchMode === 'new'
+        ? formData.customer_phone
+        : selectedCustomer?.phone || '';
+
+      // Crear reserva
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          car_id: parseInt(formData.car_id),
+          customer_name: customerName,
+          customer_email: customerEmail,
+          customer_phone: customerPhone,
+          pickup_date: pickupDateTime.toISOString(),
+          return_date: returnDateTime.toISOString(),
+          total_price: parseFloat(formData.total_price) || 0,
+          status: formData.status
+        })
+      });
+
+      if (response.ok) {
+        toast.success('¡Reserva creada exitosamente!');
+        onReservationCreated();
+        onOpenChange(false);
+        
+        // Reset form
+        setFormData({
+          pickup_date: '',
+          pickup_time: '09:00',
+          return_date: '',
+          return_time: '19:00',
+          car_id: '',
+          customer_id: '',
+          customer_first_name: '',
+          customer_last_name: '',
+          customer_email: '',
+          customer_phone: '',
+          customer_address: '',
+          customer_city: '',
+          total_price: '',
+          status: 'confirmed'
+        });
+        setSelectedCustomer(null);
+        setCalculatedPrice(null);
+        setCurrentStep('dates');
+      } else {
+        const error = await response.json();
+        if (response.status === 409) {
+          toast.error(error.message || 'El vehículo ya está reservado en esas fechas', {
+            duration: 6000,
+            style: {
+              background: '#ef4444',
+              color: 'white',
+              fontWeight: 'bold'
+            }
+          });
+        } else {
+          toast.error(error.message || 'Error creando reserva');
+        }
+      }
+    } catch (error) {
+      console.error('Error creating reservation:', error);
+      toast.error('Error creando reserva');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getWorkingHoursForDay = (dateString: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString + 'T12:00:00');
+    const dayOfWeek = date.getDay();
+    return workingHours.find(h => h.day_of_week === dayOfWeek);
+  };
+
+  const generateTimeOptions = (dateString: string) => {
+    const hours = getWorkingHoursForDay(dateString);
+    if (!hours || !hours.is_working_day) return [];
+
+    const options = [];
+    const [openHour] = hours.opening_time.split(':').map(Number);
+    const [closeHour] = hours.closing_time.split(':').map(Number);
+
+    for (let h = openHour; h <= closeHour; h++) {
+      options.push(`${h.toString().padStart(2, '0')}:00`);
+      if (h < closeHour) {
+        options.push(`${h.toString().padStart(2, '0')}:30`);
+      }
+    }
+
+    return options;
+  };
+
+  // Componente de progreso de pasos
+  const StepIndicator = () => (
+    <div className="flex items-center justify-between mb-6">
+      {[
+        { key: 'dates', label: '1. Fechas', icon: Calendar },
+        { key: 'vehicle', label: '2. Vehículo', icon: Car },
+        { key: 'customer', label: '3. Cliente', icon: User },
+        { key: 'confirm', label: '4. Confirmar', icon: CheckCircle2 }
+      ].map((step, index) => {
+        const StepIcon = step.icon;
+        const isActive = currentStep === step.key;
+        const isCompleted = ['dates', 'vehicle', 'customer', 'confirm'].indexOf(currentStep) > index;
+        
+        return (
+          <div key={step.key} className="flex items-center flex-1">
+            <div className={`flex items-center space-x-2 ${isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`rounded-full p-2 ${isActive ? 'bg-blue-100' : isCompleted ? 'bg-green-100' : 'bg-gray-100'}`}>
+                <StepIcon className="h-4 w-4" />
+              </div>
+              <span className="text-sm hidden md:inline">{step.label}</span>
+            </div>
+            {index < 3 && <ChevronRight className="h-4 w-4 text-gray-300 mx-2" />}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <Calendar className="h-5 w-5 text-blue-600" />
+            <span>Nueva Reserva</span>
+          </DialogTitle>
+          <DialogDescription>
+            Sigue los pasos para crear una nueva reserva
+          </DialogDescription>
+        </DialogHeader>
+
+        <StepIndicator />
+
+        <div className="space-y-6">
+          {/* PASO 1: SELECCIÓN DE FECHAS */}
+          {currentStep === 'dates' && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Paso 1: Selecciona las fechas de alquiler</h4>
+                    <p className="text-sm text-blue-700">Después verás qué vehículos están disponibles</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="pickup_date">Fecha Recogida *</Label>
+                  <Input
+                    id="pickup_date"
+                    type="date"
+                    value={formData.pickup_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, pickup_date: e.target.value }))}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="pickup_time">Hora Recogida *</Label>
+                  <Select
+                    value={formData.pickup_time}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, pickup_time: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {generateTimeOptions(formData.pickup_date).map((time) => (
+                        <SelectItem key={time} value={time}>
+                          {time}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="return_date">Fecha Devolución *</Label>
+                  <Input
+                    id="return_date"
+                    type="date"
+                    value={formData.return_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, return_date: e.target.value }))}
+                    min={formData.pickup_date}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="return_time">Hora Devolución *</Label>
+                  <Select
+                    value={formData.return_time}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, return_time: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {generateTimeOptions(formData.return_date).map((time) => (
+                        <SelectItem key={time} value={time}>
+                          {time}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button 
+                onClick={checkVehicleAvailability} 
+                className="w-full" 
+                disabled={checkingAvailability}
+              >
+                {checkingAvailability ? 'Verificando...' : 'Buscar Vehículos Disponibles'}
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* PASO 2: SELECCIÓN DE VEHÍCULO */}
+          {currentStep === 'vehicle' && (
+            <div className="space-y-4">
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="flex items-start space-x-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-green-900">Paso 2: Selecciona el vehículo</h4>
+                    <p className="text-sm text-green-700">
+                      {availableVehicles.length} vehículo(s) disponible(s) del {new Date(formData.pickup_date).toLocaleDateString('es-ES')} al {new Date(formData.return_date).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 max-h-96 overflow-y-auto">
+                {availableVehicles.map((vehicle) => (
+                  <Card 
+                    key={vehicle.id} 
+                    className={`cursor-pointer hover:shadow-md transition-shadow ${formData.car_id === vehicle.id ? 'border-blue-500 border-2' : ''}`}
+                    onClick={() => handleVehicleSelect(vehicle.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Car className="h-8 w-8 text-blue-600" />
+                          <div>
+                            <div className="font-semibold">{vehicle.registration_number}</div>
+                            <div className="text-sm text-gray-600">{vehicle.make} {vehicle.model}</div>
+                          </div>
+                        </div>
+                        {formData.car_id === vehicle.id && (
+                          <Check className="h-6 w-6 text-blue-600" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep('dates')}
+                className="w-full"
+              >
+                Volver a Fechas
+              </Button>
+            </div>
+          )}
+
+          {/* PASO 3: DATOS DEL CLIENTE */}
+          {currentStep === 'customer' && (
+            <div className="space-y-4">
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <div className="flex items-start space-x-2">
+                  <User className="h-5 w-5 text-purple-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-purple-900">Paso 3: Datos del cliente</h4>
+                    <p className="text-sm text-purple-700">Busca un cliente existente o crea uno nuevo</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs: Buscar o Nuevo */}
+              <div className="flex space-x-2 mb-4">
+                <Button
+                  variant={customerSearchMode === 'search' ? 'default' : 'outline'}
+                  onClick={() => setCustomerSearchMode('search')}
+                  className="flex-1"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Buscar Cliente
+                </Button>
+                <Button
+                  variant={customerSearchMode === 'new' ? 'default' : 'outline'}
+                  onClick={() => setCustomerSearchMode('new')}
+                  className="flex-1"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Nuevo Cliente
+                </Button>
+              </div>
+
+              {customerSearchMode === 'search' ? (
+                <div className="space-y-3">
+                  {/* Buscador */}
+                  <div className="space-y-2">
+                    <Label>Buscar por nombre, email o teléfono</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Escribe para buscar..."
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Cliente seleccionado */}
+                  {selectedCustomer && (
+                    <Card className="border-green-500 border-2">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold">{selectedCustomer.first_name} {selectedCustomer.last_name}</div>
+                            <div className="text-sm text-gray-600">{selectedCustomer.phone}</div>
+                            {selectedCustomer.email && <div className="text-sm text-gray-600">{selectedCustomer.email}</div>}
+                          </div>
+                          <Check className="h-6 w-6 text-green-600" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Lista de resultados */}
+                  {!selectedCustomer && customerSearch && allCustomers.length > 0 && (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {allCustomers.map((customer) => (
+                        <Card 
+                          key={customer.id} 
+                          className="cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => handleCustomerSelect(customer)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium">{customer.first_name} {customer.last_name}</div>
+                                <div className="text-xs text-gray-600">{customer.phone}</div>
+                                {customer.email && <div className="text-xs text-gray-600">{customer.email}</div>}
+                              </div>
+                              <ChevronRight className="h-4 w-4 text-gray-400" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+
+                  {!selectedCustomer && customerSearch && allCustomers.length === 0 && (
+                    <div className="text-center py-6 text-gray-500">
+                      <User className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                      <p>No se encontraron clientes</p>
+                      <Button 
+                        variant="link" 
+                        onClick={() => setCustomerSearchMode('new')}
+                        className="mt-2"
+                      >
+                        Crear nuevo cliente
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="first_name">Nombre *</Label>
+                      <Input
+                        id="first_name"
+                        value={formData.customer_first_name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, customer_first_name: e.target.value }))}
+                        placeholder="Juan"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="last_name">Apellidos *</Label>
+                      <Input
+                        id="last_name"
+                        value={formData.customer_last_name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, customer_last_name: e.target.value }))}
+                        placeholder="Pérez García"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Teléfono *</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.customer_phone}
+                        onChange={(e) => setFormData(prev => ({ ...prev, customer_phone: e.target.value }))}
+                        placeholder="+34 600 000 000"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.customer_email}
+                        onChange={(e) => setFormData(prev => ({ ...prev, customer_email: e.target.value }))}
+                        placeholder="cliente@email.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCurrentStep('vehicle')}
+                  className="flex-1"
+                >
+                  Volver
+                </Button>
+                <Button 
+                  onClick={() => setCurrentStep('confirm')}
+                  className="flex-1"
+                  disabled={customerSearchMode === 'search' ? !selectedCustomer : !formData.customer_first_name || !formData.customer_last_name || !formData.customer_phone}
+                >
+                  Continuar
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* PASO 4: CONFIRMACIÓN */}
+          {currentStep === 'confirm' && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-start space-x-2">
+                  <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Paso 4: Confirma la reserva</h4>
+                    <p className="text-sm text-blue-700">Revisa los detalles antes de confirmar</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Resumen */}
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b">
+                    <span className="font-semibold">Resumen de la Reserva</span>
+                  </div>
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Vehículo:</span>
+                      <span className="font-medium">
+                        {availableVehicles.find(v => v.id === formData.car_id)?.registration_number || 'N/A'} - {availableVehicles.find(v => v.id === formData.car_id)?.make} {availableVehicles.find(v => v.id === formData.car_id)?.model}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Cliente:</span>
+                      <span className="font-medium">
+                        {customerSearchMode === 'new' 
+                          ? `${formData.customer_first_name} ${formData.customer_last_name}`
+                          : `${selectedCustomer?.first_name} ${selectedCustomer?.last_name}`
+                        }
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Teléfono:</span>
+                      <span className="font-medium">
+                        {customerSearchMode === 'new' ? formData.customer_phone : selectedCustomer?.phone}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Recogida:</span>
+                      <span className="font-medium">
+                        {new Date(formData.pickup_date).toLocaleDateString('es-ES')} a las {formData.pickup_time}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Devolución:</span>
+                      <span className="font-medium">
+                        {new Date(formData.return_date).toLocaleDateString('es-ES')} a las {formData.return_time}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Precio */}
+                  {calculating ? (
+                    <div className="text-sm text-muted-foreground">Calculando precio...</div>
+                  ) : calculatedPrice ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">Incluir seguro</span>
+                        <Checkbox
+                          checked={includeInsurance}
+                          onCheckedChange={(checked) => {
+                            setIncludeInsurance(checked as boolean);
+                            calculatePrice(formData.car_id);
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Grupo tarifario:</span>
+                        <span className="font-medium">{calculatedPrice.pricing_group}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Duración:</span>
+                        <span>{calculatedPrice.duration_days} días</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Precio base:</span>
+                        <span>{calculatedPrice.base_price} €</span>
+                      </div>
+                      {parseFloat(calculatedPrice.discount) > 0 && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>Descuento ({calculatedPrice.discount_percent}%):</span>
+                          <span>-{calculatedPrice.discount} €</span>
+                        </div>
+                      )}
+                      {includeInsurance && (
+                        <div className="flex justify-between text-sm">
+                          <span>Seguro:</span>
+                          <span>{calculatedPrice.insurance} €</span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>Total:</span>
+                        <span className="text-blue-600">{calculatedPrice.total} €</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>Fianza requerida:</span>
+                        <span>{calculatedPrice.deposit} €</span>
+                      </div>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              {/* Estado */}
+              <div className="space-y-2">
+                <Label htmlFor="status">Estado de la reserva</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="confirmed">Confirmada</SelectItem>
+                    <SelectItem value="pending">Pendiente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCurrentStep('customer')}
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  Volver
+                </Button>
+                <Button 
+                  onClick={handleSubmit}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  disabled={loading || calculating}
+                >
+                  {loading ? 'Creando...' : 'Confirmar Reserva'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1,0 +1,231 @@
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
+import { generateContractHTML } from './lib/contracts/template';
+import { generateInspectionAnnex } from './lib/contracts/inspection-annex';
+import { getFileAsBase64 } from './lib/s3';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const prisma = new PrismaClient();
+
+async function testGenerateContract() {
+  try {
+    console.log('🔍 Buscando reserva 202510260001...\n');
+    
+    // Buscar la reserva
+    const booking = await prisma.carRentalBookings.findFirst({
+      where: { booking_number: '202510260001' },
+      include: {
+        customer: true,
+        vehicles: {
+          include: {
+            car: true
+          }
+        },
+        extras: true,
+        upgrades: true
+      }
+    });
+    
+    if (!booking) {
+      console.error('❌ No se encontró la reserva 202510260001');
+      return;
+    }
+    
+    console.log('✅ Reserva encontrada:', booking.booking_number);
+    const customerName = booking.customer ? `${booking.customer.first_name || ''} ${booking.customer.last_name || ''}`.trim() : 'N/A';
+    console.log('   Cliente:', customerName);
+    console.log('   Vehículos:', booking.vehicles?.length || 0);
+    
+    // Buscar inspecciones de entrega y devolución
+    const deliveryInspections = await prisma.vehicleInspections.findMany({
+      where: {
+        booking_id: booking.id,
+        inspection_type: 'delivery'
+      }
+    });
+    
+    const returnInspections = await prisma.vehicleInspections.findMany({
+      where: {
+        booking_id: booking.id,
+        inspection_type: 'return'
+      }
+    });
+    
+    console.log('\n📸 Inspecciones encontradas:');
+    console.log('   Entrega:', deliveryInspections.length);
+    console.log('   Devolución:', returnInspections.length);
+    
+    // Tomar la primera inspección de cada tipo
+    const deliveryInspection = deliveryInspections[0];
+    const returnInspection = returnInspections[0];
+    
+    if (deliveryInspection) {
+      console.log('\n✅ Inspección de entrega (ID:', deliveryInspection.id, ')');
+      const photoCount = [
+        deliveryInspection.front_photo,
+        deliveryInspection.left_photo,
+        deliveryInspection.rear_photo,
+        deliveryInspection.right_photo,
+        deliveryInspection.odometer_photo
+      ].filter(Boolean).length;
+      console.log('   Fotos:', photoCount);
+    }
+    
+    if (returnInspection) {
+      console.log('✅ Inspección de devolución (ID:', returnInspection.id, ')');
+      const photoCount = [
+        returnInspection.front_photo,
+        returnInspection.left_photo,
+        returnInspection.rear_photo,
+        returnInspection.right_photo,
+        returnInspection.odometer_photo
+      ].filter(Boolean).length;
+      console.log('   Fotos:', photoCount);
+    }
+    
+    // Preparar datos para el contrato
+    const vehicle = booking.vehicles?.[0]?.car;
+    
+    if (!vehicle) {
+      console.error('❌ No se encontró vehículo asociado');
+      return;
+    }
+    
+    // Función para convertir fotos a URLs firmadas (base64)
+    async function getInspectionPhotos(inspection: any) {
+      if (!inspection) return {};
+      
+      const photos: any = {};
+      const photoFields = [
+        { field: 'front_photo', key: 'frontPhoto' },
+        { field: 'left_photo', key: 'leftPhoto' },
+        { field: 'rear_photo', key: 'rearPhoto' },
+        { field: 'right_photo', key: 'rightPhoto' },
+        { field: 'odometer_photo', key: 'odometerPhoto' }
+      ];
+      
+      for (const { field, key } of photoFields) {
+        if (inspection[field]) {
+          try {
+            const base64 = await getFileAsBase64(inspection[field]);
+            photos[key] = base64;
+          } catch (error: any) {
+            console.error(`Error cargando foto ${key}:`, error.message);
+          }
+        }
+      }
+      
+      return photos;
+    }
+    
+    const deliveryPhotos = deliveryInspection ? await getInspectionPhotos(deliveryInspection) : {};
+    const returnPhotos = returnInspection ? await getInspectionPhotos(returnInspection) : {};
+    
+    console.log('\n📷 Fotos cargadas:');
+    console.log('   Entrega:', Object.keys(deliveryPhotos).length);
+    console.log('   Devolución:', Object.keys(returnPhotos).length);
+    
+    // Preparar datos del contrato
+    const fullName = booking.customer ? `${booking.customer.first_name || ''} ${booking.customer.last_name || ''}`.trim() : 'N/A';
+    const fullAddress = booking.customer?.street_address || 'N/A';
+    
+    const contractData: any = {
+      contractNumber: `CONT-${booking.booking_number}`,
+      contractDate: new Date().toLocaleDateString('es-ES'),
+      customerFullname: fullName,
+      customerDni: booking.customer?.identification_number || 'N/A',
+      customerPhone: booking.customer?.phone || 'N/A',
+      customerEmail: booking.customer?.email || 'N/A',
+      customerAddress: fullAddress,
+      driverLicense: booking.customer?.driver_license || 'N/A',
+      
+      vehicles: [{
+        registration: vehicle.registration_number || 'N/A',
+        make: vehicle.make || 'N/A',
+        model: vehicle.model || 'N/A',
+        pricePerDay: booking.total_price || 0,
+        days: 1,
+        total: booking.total_price || 0
+      }],
+      
+      pickupDate: booking.pickup_date ? new Date(booking.pickup_date).toLocaleDateString('es-ES') : 'N/A',
+      returnDate: booking.return_date ? new Date(booking.return_date).toLocaleDateString('es-ES') : 'N/A',
+      pickupLocation: booking.pickup_location || 'N/A',
+      returnLocation: booking.return_location || 'N/A',
+      
+      subtotal: booking.total_price || 0,
+      iva: 0,
+      totalPrice: (booking.total_price || 0).toFixed(2),
+      
+      language: 'es',
+      primaryColor: '#FF6B35',
+      secondaryColor: '#f59e0b',
+      
+      deliveryInspection: deliveryInspection ? {
+        odometerReading: deliveryInspection.odometer_reading,
+        fuelLevel: deliveryInspection.fuel_level,
+        generalCondition: deliveryInspection.general_condition || '',
+        notes: deliveryInspection.notes || '',
+        inspectionDate: deliveryInspection.inspection_date ? new Date(deliveryInspection.inspection_date).toLocaleDateString('es-ES') : '',
+        ...deliveryPhotos
+      } : undefined,
+      
+      returnInspection: returnInspection ? {
+        odometerReading: returnInspection.odometer_reading,
+        fuelLevel: returnInspection.fuel_level,
+        generalCondition: returnInspection.general_condition || '',
+        notes: returnInspection.notes || '',
+        inspectionDate: returnInspection.inspection_date ? new Date(returnInspection.inspection_date).toLocaleDateString('es-ES') : '',
+        ...returnPhotos
+      } : undefined
+    };
+    
+    console.log('\n🔨 Generando contrato con comparativa de inspecciones...');
+    const contractHTML = generateContractHTML(contractData);
+    
+    // Guardar contrato
+    const contractPath = path.join(__dirname, 'test_contract_with_inspections.html');
+    fs.writeFileSync(contractPath, contractHTML);
+    console.log('✅ Contrato generado:', contractPath);
+    
+    // Generar anexo si tenemos ambas inspecciones
+    if (deliveryInspection && returnInspection) {
+      console.log('\n🔨 Generando anexo con fotos grandes...');
+      
+      const annexData: any = {
+        contractNumber: `CONT-${booking.booking_number}`,
+        bookingNumber: booking.booking_number,
+        customerFullname: fullName,
+        vehicleRegistration: vehicle.registration_number || 'N/A',
+        vehicleMake: vehicle.make || 'N/A',
+        vehicleModel: vehicle.model || 'N/A',
+        deliveryInspection: contractData.deliveryInspection,
+        returnInspection: contractData.returnInspection,
+        language: 'es',
+        primaryColor: '#FF6B35',
+        secondaryColor: '#f59e0b',
+        companyName: 'ALQUILOSCOOTER'
+      };
+      
+      const annexHTML = generateInspectionAnnex(annexData);
+      const annexPath = path.join(__dirname, 'test_annex_inspections.html');
+      fs.writeFileSync(annexPath, annexHTML);
+      console.log('✅ Anexo generado:', annexPath);
+    } else {
+      console.log('\n⚠️  No se puede generar anexo: faltan inspecciones');
+    }
+    
+    console.log('\n✅ Proceso completado. Archivos generados:');
+    console.log('   1. test_contract_with_inspections.html');
+    console.log('   2. test_annex_inspections.html (si hay ambas inspecciones)');
+    console.log('\n💡 Abre los archivos en un navegador para ver el resultado');
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+testGenerateContract();

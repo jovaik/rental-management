@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ItemType, ItemStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { randomUUID } from 'crypto';
 
@@ -79,15 +79,15 @@ async function main() {
   console.log('✅ Created operator user:', operatorUser.email);
 
   // Create sample items for demo tenant
-  const items = [
+  const items: any[] = [
     {
       id: randomUUID(),
       tenantId: demoTenant.id,
-      type: 'VEHICLE',
+      type: ItemType.VEHICLE,
       name: 'Honda PCX 125',
       description: 'Comfortable and reliable scooter for city tours',
       basePrice: 30.00,
-      status: 'AVAILABLE',
+      status: ItemStatus.AVAILABLE,
       attributes: {
         licensePlate: '1234-ABC',
         model: 'Honda PCX 125',
@@ -102,11 +102,11 @@ async function main() {
     {
       id: randomUUID(),
       tenantId: demoTenant.id,
-      type: 'VEHICLE',
+      type: ItemType.VEHICLE,
       name: 'Yamaha NMAX 125',
       description: 'Sporty and efficient scooter with modern design',
       basePrice: 28.00,
-      status: 'AVAILABLE',
+      status: ItemStatus.AVAILABLE,
       attributes: {
         licensePlate: '5678-DEF',
         model: 'Yamaha NMAX 125',
@@ -121,7 +121,7 @@ async function main() {
     {
       id: randomUUID(),
       tenantId: demoTenant.id,
-      type: 'VEHICLE',
+      type: ItemType.VEHICLE,
       name: 'Vespa Primavera 150',
       description: 'Classic Italian style meets modern performance',
       basePrice: 35.00,
@@ -140,7 +140,7 @@ async function main() {
     {
       id: randomUUID(),
       tenantId: demoTenant.id,
-      type: 'VEHICLE',
+      type: ItemType.VEHICLE,
       name: 'Piaggio Liberty 125',
       description: 'Lightweight and easy to ride, perfect for beginners',
       basePrice: 25.00,
@@ -162,7 +162,7 @@ async function main() {
   console.log('✅ Created sample items for demo tenant');
 
   // Create sample customers for demo tenant
-  const customers = [
+  const customers: any[] = [
     {
       id: randomUUID(),
       tenantId: demoTenant.id,
@@ -233,7 +233,7 @@ async function main() {
   const lastMonth = new Date(today);
   lastMonth.setMonth(lastMonth.getMonth() - 1);
 
-  const bookings = [
+  const bookings: any[] = [
     {
       id: randomUUID(),
       tenantId: demoTenant.id,
@@ -395,15 +395,15 @@ async function main() {
   console.log('✅ Created Scooters Madrid owner:', scootersMadridOwner.email);
 
   // Create sample items for Scooters Madrid
-  const scooterItems = [
+  const scooterItems: any[] = [
     {
       id: randomUUID(),
       tenantId: scootersMadridTenant.id,
-      type: 'VEHICLE',
+      type: ItemType.VEHICLE,
       name: 'Electric Scooter Pro',
       description: 'High-performance electric scooter with 50km range',
       basePrice: 25.00,
-      status: 'AVAILABLE',
+      status: ItemStatus.AVAILABLE,
       attributes: {
         licensePlate: 'MAD-E001',
         model: 'Xiaomi Mi Pro 2',
@@ -418,11 +418,11 @@ async function main() {
     {
       id: randomUUID(),
       tenantId: scootersMadridTenant.id,
-      type: 'VEHICLE',
+      type: ItemType.VEHICLE,
       name: 'City Scooter Classic',
       description: 'Perfect for city rides, easy to handle',
       basePrice: 18.00,
-      status: 'AVAILABLE',
+      status: ItemStatus.AVAILABLE,
       attributes: {
         licensePlate: 'MAD-E002',
         model: 'Segway Ninebot E22',
@@ -440,7 +440,7 @@ async function main() {
   console.log('✅ Created sample items for Scooters Madrid');
 
   // Create sample customers for Scooters Madrid
-  const scooterCustomers = [
+  const scooterCustomers: any[] = [
     {
       id: randomUUID(),
       tenantId: scootersMadridTenant.id,
@@ -473,7 +473,7 @@ async function main() {
   console.log('✅ Created sample customers for Scooters Madrid');
 
   // Create bookings for Scooters Madrid
-  const scooterBookings = [
+  const scooterBookings: any[] = [
     {
       id: randomUUID(),
       tenantId: scootersMadridTenant.id,
@@ -544,7 +544,7 @@ async function main() {
   console.log('✅ Created Boats Marbella owner:', boatsMarbellaOwner.email);
 
   // Create sample items for Boats Marbella
-  const boatItems = [
+  const boatItems: any[] = [
     {
       id: randomUUID(),
       tenantId: boatsMarbellatenant.id,
@@ -552,7 +552,7 @@ async function main() {
       name: 'Luxury Yacht Azimut 50',
       description: 'Luxurious yacht perfect for coastal cruising',
       basePrice: 800.00,
-      status: 'AVAILABLE',
+      status: ItemStatus.AVAILABLE,
       attributes: {
         length: '50 ft',
         capacity: '12 passengers',
@@ -569,7 +569,7 @@ async function main() {
       name: 'Speedboat Sunseeker',
       description: 'Fast and sporty speedboat for adventure seekers',
       basePrice: 450.00,
-      status: 'AVAILABLE',
+      status: ItemStatus.AVAILABLE,
       attributes: {
         length: '30 ft',
         capacity: '8 passengers',
@@ -585,7 +585,7 @@ async function main() {
       name: 'Sailboat Beneteau Oceanis',
       description: 'Classic sailboat for a peaceful sailing experience',
       basePrice: 350.00,
-      status: 'AVAILABLE',
+      status: ItemStatus.AVAILABLE,
       attributes: {
         length: '38 ft',
         capacity: '6 passengers',
@@ -601,7 +601,7 @@ async function main() {
   console.log('✅ Created sample items for Boats Marbella');
 
   // Create sample customers for Boats Marbella
-  const boatCustomers = [
+  const boatCustomers: any[] = [
     {
       id: randomUUID(),
       tenantId: boatsMarbellatenant.id,
@@ -647,7 +647,7 @@ async function main() {
   console.log('✅ Created sample customers for Boats Marbella');
 
   // Create bookings for Boats Marbella
-  const boatBookings = [
+  const boatBookings: any[] = [
     {
       id: randomUUID(),
       tenantId: boatsMarbellatenant.id,

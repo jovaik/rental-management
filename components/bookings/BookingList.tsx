@@ -6,14 +6,14 @@ import { useRouter } from 'next/navigation';
 import { Booking } from '@prisma/client';
 
 type BookingWithRelations = Booking & {
-  item: {
+  Item: {
     id: string;
     name: string;
     type: string;
     basePrice: number;
     photos: string[];
   };
-  customer: {
+  Customer: {
     id: string;
     name: string;
     email: string;
@@ -294,26 +294,26 @@ export default function BookingList({ initialBookings, initialStats }: BookingLi
                   <tr key={booking.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {booking.item.photos[0] && (
+                        {booking.Item.photos[0] && (
                           <img
-                            src={booking.item.photos[0]}
-                            alt={booking.item.name}
+                            src={booking.Item.photos[0]}
+                            alt={booking.Item.name}
                             className="h-10 w-10 rounded object-cover mr-3"
                           />
                         )}
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {booking.item.name}
+                            {booking.Item.name}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {booking.item.type}
+                            {booking.Item.type}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{booking.customer.name}</div>
-                      <div className="text-sm text-gray-500">{booking.customer.email}</div>
+                      <div className="text-sm text-gray-900">{booking.Customer.name}</div>
+                      <div className="text-sm text-gray-500">{booking.Customer.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">

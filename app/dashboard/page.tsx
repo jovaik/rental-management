@@ -105,13 +105,13 @@ export default async function DashboardPage() {
       },
     },
     include: {
-      item: {
+      Item: {
         select: {
           name: true,
           photos: true,
         },
       },
-      customer: {
+      Customer: {
         select: {
           name: true,
         },
@@ -134,14 +134,14 @@ export default async function DashboardPage() {
   const recentInvoices = await prisma.invoice.findMany({
     where: { tenantId },
     include: {
-      booking: {
+      Booking: {
         include: {
-          customer: {
+          Customer: {
             select: {
               name: true,
             },
           },
-          item: {
+          Item: {
             select: {
               name: true,
             },
@@ -397,10 +397,10 @@ export default async function DashboardPage() {
                     >
                       <div className="flex items-center space-x-4">
                         <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
-                          {booking.item.photos && booking.item.photos.length > 0 ? (
+                          {booking.Item.photos && booking.Item.photos.length > 0 ? (
                             <img
-                              src={booking.item.photos[0]}
-                              alt={booking.item.name}
+                              src={booking.Item.photos[0]}
+                              alt={booking.Item.name}
                               className="h-full w-full object-cover"
                             />
                           ) : (
@@ -412,10 +412,10 @@ export default async function DashboardPage() {
                             href={`/bookings/${booking.id}`}
                             className="font-medium text-gray-900 hover:text-blue-600"
                           >
-                            {booking.item.name}
+                            {booking.Item.name}
                           </Link>
                           <p className="text-sm text-gray-500">
-                            {booking.customer.name}
+                            {booking.Customer.name}
                           </p>
                         </div>
                       </div>
@@ -477,7 +477,7 @@ export default async function DashboardPage() {
                           {invoice.invoiceNumber}
                         </Link>
                         <p className="text-sm text-gray-500">
-                          {invoice.booking.customer.name} - {invoice.booking.item.name}
+                          {invoice.Booking.Customer.name} - {invoice.Booking.Item.name}
                         </p>
                       </div>
                     </div>

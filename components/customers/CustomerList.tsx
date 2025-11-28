@@ -14,7 +14,7 @@ interface Customer {
   documentNumber: string;
   createdAt: string;
   _count: {
-    bookings: number;
+    Booking: number;
   };
 }
 
@@ -103,13 +103,13 @@ export function CustomerList({ initialCustomers }: CustomerListProps) {
         <div className="bg-white p-4 rounded-lg border">
           <div className="text-sm text-gray-600">Con Reservas</div>
           <div className="text-2xl font-bold mt-1">
-            {customers.filter((c) => c._count.bookings > 0).length}
+            {customers.filter((c) => c._count.Booking > 0).length}
           </div>
         </div>
         <div className="bg-white p-4 rounded-lg border">
           <div className="text-sm text-gray-600">Total Reservas</div>
           <div className="text-2xl font-bold mt-1">
-            {customers.reduce((acc, c) => acc + c._count.bookings, 0)}
+            {customers.reduce((acc, c) => acc + c._count.Booking, 0)}
           </div>
         </div>
       </div>
@@ -192,7 +192,7 @@ export function CustomerList({ initialCustomers }: CustomerListProps) {
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {customer._count.bookings}
+                        {customer._count.Booking}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -215,7 +215,7 @@ export function CustomerList({ initialCustomers }: CustomerListProps) {
                           onClick={() => handleDelete(customer.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
                           title="Eliminar"
-                          disabled={customer._count.bookings > 0}
+                          disabled={customer._count.Booking > 0}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

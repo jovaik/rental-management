@@ -31,10 +31,10 @@ export async function GET(
         tenantId,
       },
       include: {
-        booking: {
+        Booking: {
           include: {
-            customer: true,
-            item: true,
+            Customer: true,
+            Item: true,
           },
         },
       },
@@ -100,10 +100,10 @@ export async function PUT(
         paidAt: data.paidAt ? new Date(data.paidAt) : undefined,
       },
       include: {
-        booking: {
+        Booking: {
           include: {
-            customer: true,
-            item: true,
+            Customer: true,
+            Item: true,
           },
         },
       },

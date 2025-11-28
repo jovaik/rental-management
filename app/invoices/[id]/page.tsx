@@ -24,10 +24,10 @@ export default async function InvoiceDetailPage({
       tenantId,
     },
     include: {
-      booking: {
+      Booking: {
         include: {
-          customer: true,
-          item: true,
+          Customer: true,
+          Item: true,
         },
       },
     },
@@ -43,11 +43,11 @@ export default async function InvoiceDetailPage({
     createdAt: invoice.createdAt.toISOString(),
     dueDate: invoice.dueDate?.toISOString() || null,
     paidAt: invoice.paidAt?.toISOString() || null,
-    booking: {
-      ...invoice.booking,
-      startDate: invoice.booking.startDate.toISOString(),
-      endDate: invoice.booking.endDate.toISOString(),
-      notes: invoice.booking.notes || null,
+    Booking: {
+      ...invoice.Booking,
+      startDate: invoice.Booking.startDate.toISOString(),
+      endDate: invoice.Booking.endDate.toISOString(),
+      notes: invoice.Booking.notes || null,
     },
   };
 

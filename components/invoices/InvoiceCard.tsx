@@ -18,14 +18,14 @@ interface Invoice {
   dueDate?: string | null;
   paidAt?: string | null;
   pdfUrl?: string | null;
-  booking: {
+  Booking: {
     id: string;
     startDate: string;
     endDate: string;
     totalPrice: number;
     deposit: number;
     notes?: string | null;
-    customer: {
+    Customer: {
       id: string;
       name: string;
       email: string;
@@ -33,7 +33,7 @@ interface Invoice {
       documentType: string;
       documentNumber: string;
     };
-    item: {
+    Item: {
       id: string;
       name: string;
       type: string;
@@ -138,25 +138,25 @@ export function InvoiceCard({ invoice }: InvoiceCardProps) {
             <div>
               <div className="text-sm text-gray-600">Nombre</div>
               <Link
-                href={`/customers/${invoice.booking.customer.id}`}
+                href={`/customers/${invoice.Booking.Customer.id}`}
                 className="font-medium text-blue-600 hover:underline"
               >
-                {invoice.booking.customer.name}
+                {invoice.Booking.Customer.name}
               </Link>
             </div>
             <div>
               <div className="text-sm text-gray-600">Email</div>
-              <div>{invoice.booking.customer.email}</div>
+              <div>{invoice.Booking.Customer.email}</div>
             </div>
             <div>
               <div className="text-sm text-gray-600">Teléfono</div>
-              <div>{invoice.booking.customer.phone}</div>
+              <div>{invoice.Booking.Customer.phone}</div>
             </div>
             <div>
               <div className="text-sm text-gray-600">Documento</div>
               <div>
-                {invoice.booking.customer.documentType}{' '}
-                {invoice.booking.customer.documentNumber}
+                {invoice.Booking.Customer.documentType}{' '}
+                {invoice.Booking.Customer.documentNumber}
               </div>
             </div>
           </div>
@@ -171,21 +171,21 @@ export function InvoiceCard({ invoice }: InvoiceCardProps) {
             <div>
               <div className="text-sm text-gray-600">Item</div>
               <Link
-                href={`/bookings/${invoice.booking.id}`}
+                href={`/bookings/${invoice.Booking.id}`}
                 className="font-medium text-blue-600 hover:underline"
               >
-                {invoice.booking.item.name}
+                {invoice.Booking.Item.name}
               </Link>
             </div>
             <div>
               <div className="text-sm text-gray-600">Tipo</div>
-              <div>{invoice.booking.item.type}</div>
+              <div>{invoice.Booking.Item.type}</div>
             </div>
             <div>
               <div className="text-sm text-gray-600">Período</div>
               <div>
-                {format(new Date(invoice.booking.startDate), 'PPP', { locale: es })} -{' '}
-                {format(new Date(invoice.booking.endDate), 'PPP', { locale: es })}
+                {format(new Date(invoice.Booking.startDate), 'PPP', { locale: es })} -{' '}
+                {format(new Date(invoice.Booking.endDate), 'PPP', { locale: es })}
               </div>
             </div>
           </div>
@@ -202,14 +202,14 @@ export function InvoiceCard({ invoice }: InvoiceCardProps) {
           <div className="flex justify-between">
             <span className="text-gray-600">Precio Base</span>
             <span className="font-medium">
-              €{invoice.booking.totalPrice.toFixed(2)}
+              €{invoice.Booking.totalPrice.toFixed(2)}
             </span>
           </div>
-          {invoice.booking.deposit > 0 && (
+          {invoice.Booking.deposit > 0 && (
             <div className="flex justify-between">
               <span className="text-gray-600">Depósito</span>
               <span className="font-medium">
-                €{invoice.booking.deposit.toFixed(2)}
+                €{invoice.Booking.deposit.toFixed(2)}
               </span>
             </div>
           )}
@@ -272,11 +272,11 @@ export function InvoiceCard({ invoice }: InvoiceCardProps) {
       </div>
 
       {/* Notes */}
-      {invoice.booking.notes && (
+      {invoice.Booking.notes && (
         <div className="bg-white p-6 rounded-lg border">
           <h2 className="text-lg font-semibold mb-2">Notas de la Reserva</h2>
           <p className="text-gray-700 whitespace-pre-wrap">
-            {invoice.booking.notes}
+            {invoice.Booking.notes}
           </p>
         </div>
       )}

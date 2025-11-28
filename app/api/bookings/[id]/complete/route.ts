@@ -44,8 +44,8 @@ export async function POST(
       where: { id },
       data: { status: 'COMPLETED' },
       include: {
-        item: true,
-        customer: true,
+        Item: true,
+        Customer: true,
       },
     });
 

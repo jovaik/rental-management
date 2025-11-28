@@ -1,0 +1,393 @@
+// Prisma schema for Car Rental Management System
+// PHPJabbers + NextJS Hybrid System
+
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/rental_management_app/app/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Existing PHPJabbers Tables (Referenced)
+model CarRentalUsers {
+  id                Int                          @id @default(autoincrement()) @map("id")
+  email             String                       @unique @map("email")
+  password          String                       @map("password")
+  salt              String?                      @map("salt")
+  username          String?                      @map("username")
+  firstname         String?                      @map("firstname")
+  lastname          String?                      @map("lastname")
+  phone             String?                      @map("phone")
+  status            UserStatus?                  @default(T) @map("status")
+  role              String?                      @default("user") @map("role")
+  created           DateTime?                    @default(now()) @map("created")
+  modified          DateTime?                    @map("modified")
+  
+  // Relationships with extended tables
+  maintenanceRecords    CarRentalVehicleMaintenance[] @relation("MaintenanceTechnician")
+  createdMaintenance    CarRentalVehicleMaintenance[] @relation("MaintenanceCreator")
+  calendarEvents        CarRentalCalendarEvents[]    @relation("CalendarCreator")
+  assignedEvents        CarRentalCalendarEvents[]    @relation("CalendarAssigned")
+  vehicleHistory        CarRentalVehicleHistory[]
+  uploadedDocuments     CarRentalVehicleDocuments[]
+  notifications         CarRentalNotifications[]
+  pickupBookings        CarRentalBookings[]          @relation("PickupStaff")
+  returnBookings        CarRentalBookings[]          @relation("ReturnStaff")
+
+  @@map("car_rental_users")
+}
+
+model CarRentalLocations {
+  id               Int                      @id @default(autoincrement()) @map("id")
+  name             String?                  @map("name")
+  address          String?                  @map("address")
+  phone            String?                  @map("phone")
+  email            String?                  @map("email")
+  status           UserStatus?              @default(T) @map("status")
+  
+  // Relationships
+  cars             CarRentalCars[]
+  calendarEvents   CarRentalCalendarEvents[]
+
+  @@map("car_rental_locations")
+}
+
+model CarRentalCars {
+  id                      Int                          @id @default(autoincrement()) @map("id")
+  registration_number     String?                      @map("registration_number")
+  location_id             Int?                         @map("location_id")
+  car_type_id             Int?                         @map("car_type_id")
+  status                  UserStatus?                  @default(T) @map("status")
+  mileage                 Int?                         @map("mileage")
+  
+  // Extended fields from schema extension
+  vin                     String?                      @map("vin")
+  year                    Int?                         @map("year")
+  make                    String?                      @map("make")
+  model                   String?                      @map("model")
+  color                   String?                      @map("color")
+  fuel_type               String?                      @default("gasoline") @map("fuel_type")
+  transmission_type       String?                      @default("manual") @map("transmission_type")
+  engine_size             String?                      @map("engine_size")
+  seating_capacity        Int?                         @map("seating_capacity")
+  purchase_date           DateTime?                    @map("purchase_date") @db.Date
+  purchase_price          Decimal?                     @map("purchase_price") @db.Decimal(12, 2)
+  current_value           Decimal?                     @map("current_value") @db.Decimal(12, 2)
+  insurance_policy        String?                      @map("insurance_policy")
+  insurance_expiry        DateTime?                    @map("insurance_expiry") @db.Date
+  registration_expiry     DateTime?                    @map("registration_expiry") @db.Date
+  last_service_date       DateTime?                    @map("last_service_date") @db.Date
+  last_service_mileage    Int?                         @map("last_service_mileage")
+  next_service_due        DateTime?                    @map("next_service_due") @db.Date
+  next_service_mileage    Int?                         @map("next_service_mileage")
+  condition_rating        String?                      @default("good") @map("condition_rating")
+  notes                   String?                      @map("notes") @db.Text
+  created_at              DateTime?                    @default(now()) @map("created_at")
+  updated_at              DateTime?                    @updatedAt @map("updated_at")
+
+  // Relationships
+  location                CarRentalLocations?          @relation(fields: [location_id], references: [id])
+  bookings                CarRentalBookings[]
+  maintenance             CarRentalVehicleMaintenance[]
+  calendarEvents          CarRentalCalendarEvents[]
+  vehicleHistory          CarRentalVehicleHistory[]
+  documents               CarRentalVehicleDocuments[]
+
+  @@map("car_rental_cars")
+}
+
+model CarRentalBookings {
+  id                              Int               @id @default(autoincrement()) @map("id")
+  car_id                          Int?              @map("car_id")
+  customer_id                     Int?              @map("customer_id")
+  customer_name                   String?           @map("customer_name")
+  customer_email                  String?           @map("customer_email")
+  customer_phone                  String?           @map("customer_phone")
+  pickup_date                     DateTime?         @map("pickup_date")
+  return_date                     DateTime?         @map("return_date")
+  total_price                     Decimal?          @map("total_price") @db.Decimal(9, 2)
+  status                          String?           @default("confirmed") @map("status")
+  
+  // Extended fields from schema extension
+  actual_pickup_datetime          DateTime?         @map("actual_pickup_datetime")
+  actual_return_datetime          DateTime?         @map("actual_return_datetime")
+  pickup_condition_notes          String?           @map("pickup_condition_notes") @db.Text
+  return_condition_notes          String?           @map("return_condition_notes") @db.Text
+  fuel_level_pickup               String?           @map("fuel_level_pickup")
+  fuel_level_return               String?           @map("fuel_level_return")
+  damage_reported                 String?           @default("N") @map("damage_reported")
+  damage_description              String?           @map("damage_description") @db.Text
+  additional_charges              Decimal?          @default(0.00) @map("additional_charges") @db.Decimal(9, 2)
+  additional_charges_description  String?           @map("additional_charges_description") @db.Text
+  customer_signature_path         String?           @map("customer_signature_path")
+  staff_signature_path            String?           @map("staff_signature_path")
+  pickup_staff_id                 Int?              @map("pickup_staff_id")
+  return_staff_id                 Int?              @map("return_staff_id")
+
+  // Relationships
+  car                             CarRentalCars?    @relation(fields: [car_id], references: [id])
+  customer                        CarRentalCustomers? @relation(fields: [customer_id], references: [id])
+  pickupStaff                     CarRentalUsers?   @relation("PickupStaff", fields: [pickup_staff_id], references: [id])
+  returnStaff                     CarRentalUsers?   @relation("ReturnStaff", fields: [return_staff_id], references: [id])
+
+  @@map("car_rental_bookings")
+}
+
+// New Extended Tables
+model CarRentalVehicleMaintenance {
+  id                        Int                               @id @default(autoincrement()) @map("id")
+  car_id                    Int                               @map("car_id")
+  maintenance_type          String                            @default("preventive") @map("maintenance_type")
+  title                     String                            @map("title")
+  description               String?                           @map("description") @db.Text
+  scheduled_date            DateTime                          @map("scheduled_date")
+  completed_date            DateTime?                         @map("completed_date")
+  next_maintenance_date     DateTime?                         @map("next_maintenance_date")
+  mileage_at_maintenance    Int?                              @map("mileage_at_maintenance")
+  next_maintenance_mileage  Int?                              @map("next_maintenance_mileage")
+  status                    String                            @default("scheduled") @map("status")
+  priority                  String                            @default("medium") @map("priority")
+  estimated_duration_hours  Decimal?                          @map("estimated_duration_hours") @db.Decimal(4, 2)
+  actual_duration_hours     Decimal?                          @map("actual_duration_hours") @db.Decimal(4, 2)
+  technician_id             Int?                              @map("technician_id")
+  workshop_location         String?                           @map("workshop_location")
+  notes                     String?                           @map("notes") @db.Text
+  created_by                Int?                              @map("created_by")
+  created_at                DateTime                          @default(now()) @map("created_at")
+  updated_at                DateTime?                         @updatedAt @map("updated_at")
+
+  // Relationships
+  car                       CarRentalCars                     @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  technician                CarRentalUsers?                   @relation("MaintenanceTechnician", fields: [technician_id], references: [id])
+  creator                   CarRentalUsers?                   @relation("MaintenanceCreator", fields: [created_by], references: [id])
+  expenses                  CarRentalMaintenanceExpenses[]
+  calendarEvents            CarRentalCalendarEvents[]
+
+  @@map("car_rental_vehicle_maintenance")
+}
+
+model CarRentalMaintenanceExpenses {
+  id                      Int                         @id @default(autoincrement()) @map("id")
+  maintenance_id          Int                         @map("maintenance_id")
+  expense_category        String                      @map("expense_category")
+  item_name               String                      @map("item_name")
+  description             String?                     @map("description") @db.Text
+  quantity                Decimal                     @default(1.00) @map("quantity") @db.Decimal(8, 2)
+  unit_price              Decimal                     @map("unit_price") @db.Decimal(10, 2)
+  total_price             Decimal                     @map("total_price") @db.Decimal(10, 2)
+  supplier                String?                     @map("supplier")
+  invoice_number          String?                     @map("invoice_number")
+  purchase_date           DateTime?                   @map("purchase_date") @db.Date
+  warranty_months         Int?                        @map("warranty_months")
+  warranty_expires        DateTime?                   @map("warranty_expires") @db.Date
+  is_billable_to_customer String                      @default("N") @map("is_billable_to_customer")
+  tax_rate                Decimal                     @default(0.00) @map("tax_rate") @db.Decimal(5, 2)
+  tax_amount              Decimal                     @default(0.00) @map("tax_amount") @db.Decimal(10, 2)
+  notes                   String?                     @map("notes") @db.Text
+  receipt_path            String?                     @map("receipt_path")
+  created_at              DateTime                    @default(now()) @map("created_at")
+  updated_at              DateTime?                   @updatedAt @map("updated_at")
+
+  // Relationships
+  maintenance             CarRentalVehicleMaintenance @relation(fields: [maintenance_id], references: [id], onDelete: Cascade)
+
+  @@map("car_rental_maintenance_expenses")
+}
+
+model CarRentalCalendarEvents {
+  id                      Int                         @id @default(autoincrement()) @map("id")
+  event_type              String                      @map("event_type")
+  reference_id            Int?                        @map("reference_id")
+  car_id                  Int?                        @map("car_id")
+  location_id             Int?                        @map("location_id")
+  title                   String                      @map("title")
+  description             String?                     @map("description") @db.Text
+  start_datetime          DateTime                    @map("start_datetime")
+  end_datetime            DateTime                    @map("end_datetime")
+  all_day                 String                      @default("N") @map("all_day")
+  recurring               String                      @default("none") @map("recurring")
+  recurring_until         DateTime?                   @map("recurring_until") @db.Date
+  recurring_interval      Int                         @default(1) @map("recurring_interval")
+  color                   String                      @default("#3788d8") @map("color")
+  status                  String                      @default("confirmed") @map("status")
+  priority                String                      @default("medium") @map("priority")
+  reminder_minutes        Int?                        @map("reminder_minutes")
+  is_public               String                      @default("Y") @map("is_public")
+  created_by              Int?                        @map("created_by")
+  assigned_to             Int?                        @map("assigned_to")
+  created_at              DateTime                    @default(now()) @map("created_at")
+  updated_at              DateTime?                   @updatedAt @map("updated_at")
+
+  // Relationships
+  car                     CarRentalCars?              @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  location                CarRentalLocations?         @relation(fields: [location_id], references: [id])
+  creator                 CarRentalUsers?             @relation("CalendarCreator", fields: [created_by], references: [id])
+  assignedTo              CarRentalUsers?             @relation("CalendarAssigned", fields: [assigned_to], references: [id])
+  maintenance             CarRentalVehicleMaintenance? @relation(fields: [reference_id], references: [id])
+
+  @@map("car_rental_calendar_events")
+}
+
+model CarRentalVehicleHistory {
+  id                      Int               @id @default(autoincrement()) @map("id")
+  car_id                  Int               @map("car_id")
+  event_type              String            @map("event_type")
+  event_date              DateTime          @map("event_date")
+  description             String            @map("description") @db.Text
+  old_value               String?           @map("old_value") @db.Text
+  new_value               String?           @map("new_value") @db.Text
+  mileage_at_event        Int?              @map("mileage_at_event")
+  cost                    Decimal?          @map("cost") @db.Decimal(10, 2)
+  reference_id            Int?              @map("reference_id")
+  reference_type          String?           @map("reference_type")
+  created_by              Int?              @map("created_by")
+  notes                   String?           @map("notes") @db.Text
+  created_at              DateTime          @default(now()) @map("created_at")
+
+  // Relationships
+  car                     CarRentalCars     @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  creator                 CarRentalUsers?   @relation(fields: [created_by], references: [id])
+
+  @@map("car_rental_vehicle_history")
+}
+
+model CarRentalVehicleDocuments {
+  id                      Int               @id @default(autoincrement()) @map("id")
+  car_id                  Int               @map("car_id")
+  document_type           String            @map("document_type")
+  title                   String            @map("title")
+  description             String?           @map("description") @db.Text
+  file_path               String            @map("file_path")
+  file_name               String            @map("file_name")
+  file_size               Int?              @map("file_size")
+  mime_type               String?           @map("mime_type")
+  issue_date              DateTime?         @map("issue_date") @db.Date
+  expiry_date             DateTime?         @map("expiry_date") @db.Date
+  is_expired              String            @default("N") @map("is_expired")
+  reminder_days_before    Int               @default(30) @map("reminder_days_before")
+  uploaded_by             Int?              @map("uploaded_by")
+  created_at              DateTime          @default(now()) @map("created_at")
+  updated_at              DateTime?         @updatedAt @map("updated_at")
+
+  // Relationships
+  car                     CarRentalCars     @relation(fields: [car_id], references: [id], onDelete: Cascade)
+  uploader                CarRentalUsers?   @relation(fields: [uploaded_by], references: [id])
+
+  @@map("car_rental_vehicle_documents")
+}
+
+model CarRentalHybridConfig {
+  id                      Int               @id @default(autoincrement()) @map("id")
+  config_key              String            @unique @map("config_key")
+  config_value            String?           @map("config_value") @db.Text
+  config_type             String            @default("string") @map("config_type")
+  category                String            @default("general") @map("category")
+  description             String?           @map("description") @db.Text
+  is_public               String            @default("N") @map("is_public")
+  created_at              DateTime          @default(now()) @map("created_at")
+  updated_at              DateTime?         @updatedAt @map("updated_at")
+
+  @@map("car_rental_hybrid_config")
+}
+
+model CarRentalNotifications {
+  id                      Int               @id @default(autoincrement()) @map("id")
+  user_id                 Int?              @map("user_id")
+  type                    String            @map("type")
+  title                   String            @map("title")
+  message                 String            @map("message") @db.Text
+  reference_id            Int?              @map("reference_id")
+  reference_type          String?           @map("reference_type")
+  priority                String            @default("medium") @map("priority")
+  is_read                 String            @default("N") @map("is_read")
+  is_sent                 String            @default("N") @map("is_sent")
+  send_email              String            @default("N") @map("send_email")
+  send_sms                String            @default("N") @map("send_sms")
+  scheduled_for           DateTime?         @map("scheduled_for")
+  sent_at                 DateTime?         @map("sent_at")
+  created_at              DateTime          @default(now()) @map("created_at")
+
+  // Relationships
+  user                    CarRentalUsers?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("car_rental_notifications")
+}
+
+// Customer Management
+model CarRentalCustomers {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  first_name              String                @map("first_name")
+  last_name               String                @map("last_name")
+  email                   String?               @unique @map("email")
+  phone                   String                @map("phone")
+  address                 String?               @map("address") @db.Text
+  city                    String?               @map("city")
+  state                   String?               @map("state")
+  country                 String?               @default("España") @map("country")
+  postal_code             String?               @map("postal_code")
+  dni_nie                 String?               @unique @map("dni_nie")
+  driver_license          String?               @map("driver_license")
+  license_expiry          DateTime?             @map("license_expiry") @db.Date
+  date_of_birth           DateTime?             @map("date_of_birth") @db.Date
+  customer_type           String                @default("individual") @map("customer_type")
+  company_name            String?               @map("company_name")
+  tax_id                  String?               @map("tax_id")
+  preferred_language      String?               @default("es") @map("preferred_language")
+  notes                   String?               @map("notes") @db.Text
+  status                  String                @default("active") @map("status")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+
+  // Relationships
+  bookings                CarRentalBookings[]
+
+  @@map("car_rental_customers")
+}
+
+// Pricing System
+model CarRentalPricingGroups {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  name                    String                @unique @map("name")
+  description             String?               @map("description") @db.Text
+  vehicle_category        String                @map("vehicle_category")
+  base_price_per_day      Decimal               @map("base_price_per_day") @db.Decimal(10, 2)
+  price_per_hour          Decimal?              @map("price_per_hour") @db.Decimal(10, 2)
+  weekly_discount_percent Decimal?              @default(0) @map("weekly_discount_percent") @db.Decimal(5, 2)
+  monthly_discount_percent Decimal?             @default(0) @map("monthly_discount_percent") @db.Decimal(5, 2)
+  min_rental_days         Int                   @default(1) @map("min_rental_days")
+  insurance_per_day       Decimal?              @default(0) @map("insurance_per_day") @db.Decimal(10, 2)
+  deposit_amount          Decimal?              @default(0) @map("deposit_amount") @db.Decimal(10, 2)
+  extra_km_charge         Decimal?              @default(0) @map("extra_km_charge") @db.Decimal(10, 2)
+  included_km_per_day     Int?                  @default(0) @map("included_km_per_day")
+  status                  String                @default("active") @map("status")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+
+  @@map("car_rental_pricing_groups")
+}
+
+// Working Hours Configuration
+model CarRentalWorkingHours {
+  id                      Int                   @id @default(autoincrement()) @map("id")
+  day_of_week             Int                   @map("day_of_week") // 0=Sunday, 1=Monday, ..., 6=Saturday
+  is_working_day          Boolean               @default(true) @map("is_working_day")
+  opening_time            String                @map("opening_time") // Format: "09:00"
+  closing_time            String                @map("closing_time") // Format: "19:00"
+  break_start_time        String?               @map("break_start_time")
+  break_end_time          String?               @map("break_end_time")
+  created_at              DateTime              @default(now()) @map("created_at")
+  updated_at              DateTime?             @updatedAt @map("updated_at")
+
+  @@unique([day_of_week])
+  @@map("car_rental_working_hours")
+}
+
+// Enums
+enum UserStatus {
+  T // True/Active
+  F // False/Inactive
+}

@@ -13,16 +13,16 @@ export default async function InvoicesPage() {
   const invoices = await prisma.invoice.findMany({
     where: { tenantId },
     include: {
-      booking: {
+      Booking: {
         include: {
-          customer: {
+          Customer: {
             select: {
               id: true,
               name: true,
               email: true,
             },
           },
-          item: {
+          Item: {
             select: {
               id: true,
               name: true,
