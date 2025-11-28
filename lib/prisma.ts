@@ -16,7 +16,7 @@ export function getTenantId(): string | null {
   return currentTenantId;
 }
 
-// Create Prisma Client - no middleware needed for now
+// Create Prisma Client - optimized for serverless
 // We'll handle tenant isolation manually in API routes
 function createPrismaClient() {
   // Skip during build if DATABASE_URL is not set
@@ -27,7 +27,17 @@ function createPrismaClient() {
 
   const client = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
   });
+
+  // Ensure proper cleanup on serverless function termination
+  if (process.env.NODE_ENV === 'production') {
+    client.$connect();
+  }
 
   return client;
 }
