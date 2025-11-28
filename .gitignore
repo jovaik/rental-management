@@ -1,8 +1,5 @@
+# Dependencies
 **/node_modules
-.next
-.cache
-.build
-*.nfs*
 **/.yarn/
 !**/.yarn/patches
 !**/.yarn/plugins
@@ -12,9 +9,57 @@
 !**/.yarn/cache
 **/.yarn/build-state.yml
 **/.yarn/install-state.gz
+
+# Next.js
+.next
+out
+.cache
+.build
 dist
 target
-out
-.deploy
-.logs
 *.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.backup*
+.env.old
+
+# Logs
+.logs
+*.log
+cloudflared.log
+server.log
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Build artifacts
+.deploy
+*.nfs*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Abacus
+.abacus.donotdelete
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.vercel
+.turbo
