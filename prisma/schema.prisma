@@ -1,6 +1,3 @@
-// This is your Prisma schema file
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,154 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enums
-enum BusinessType {
-  SCOOTER_RENTAL
-  VEHICLE_RENTAL
-  PROPERTY_RENTAL
-  BOAT_RENTAL
-  EXPERIENCE_RENTAL
-  EQUIPMENT_RENTAL
-}
-
-enum UserRole {
-  SUPER_ADMIN
-  OWNER
-  ADMIN
-  OPERATOR
-  MECHANIC
-}
-
-enum ItemType {
-  VEHICLE
-  PROPERTY
-  BOAT
-  EXPERIENCE
-  EQUIPMENT
-}
-
-enum ItemStatus {
-  AVAILABLE
-  RENTED
-  MAINTENANCE
-  UNAVAILABLE
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum InvoiceStatus {
-  PENDING
-  PAID
-  CANCELLED
-  REFUNDED
-}
-
-enum DocumentType {
-  DNI
-  NIE
-  PASSPORT
-  DRIVING_LICENSE
-}
-
-// Multi-tenant Models
-model Tenant {
-  id            String         @id @default(cuid())
-  name          String
-  subdomain     String         @unique
-  businessTypes BusinessType[]
-  location      String?
-  logo          String?
-  colors        Json?          // { primary: "#...", secondary: "#..." }
-  config        Json?          // Additional configuration
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  // Relations
-  users     User[]
-  items     Item[]
-  bookings  Booking[]
-  customers Customer[]
-  invoices  Invoice[]
-
-  @@index([subdomain])
-}
-
-model User {
-  id        String   @id @default(cuid())
-  tenantId  String
-  email     String   @unique
-  name      String
-  password  String
-  role      UserRole
-  avatar    String?
-  phone     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([email])
-}
-
-model Item {
-  id          String     @id @default(cuid())
-  tenantId    String
-  type        ItemType
-  name        String
-  description String?
-  basePrice   Float
-  status      ItemStatus @default(AVAILABLE)
-  attributes  Json?      // Dynamic fields based on type
-  photos      String[]   // Array of photo URLs
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  bookings Booking[]
-
-  @@index([tenantId])
-  @@index([type])
-  @@index([status])
-}
-
-model Customer {
-  id             String       @id @default(cuid())
-  tenantId       String
-  name           String
-  email          String
-  phone          String
-  documentType   DocumentType
-  documentNumber String
-  documents      Json?        // Stored document URLs and metadata
-  address        String?
-  city           String?
-  country        String?
-  notes          String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  bookings Booking[]
-
-  @@unique([tenantId, email])
-  @@index([tenantId])
-  @@index([email])
-  @@index([documentNumber])
-}
-
 model Booking {
-  id         String        @id @default(cuid())
+  id         String        @id
   tenantId   String
   itemId     String
   customerId String
@@ -168,24 +19,46 @@ model Booking {
   status     BookingStatus @default(PENDING)
   notes      String?
   createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  updatedAt  DateTime
+  Customer   Customer      @relation(fields: [customerId], references: [id])
+  Item       Item          @relation(fields: [itemId], references: [id])
+  Tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  Invoice    Invoice[]
 
-  // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  item     Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  invoices Invoice[]
-
-  @@index([tenantId])
-  @@index([itemId])
   @@index([customerId])
-  @@index([startDate])
   @@index([endDate])
+  @@index([itemId])
+  @@index([startDate])
   @@index([status])
+  @@index([tenantId])
+}
+
+model Customer {
+  id             String       @id
+  tenantId       String
+  name           String
+  email          String
+  phone          String
+  documentType   DocumentType
+  documentNumber String
+  documents      Json?
+  address        String?
+  city           String?
+  country        String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  Booking        Booking[]
+  Tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([documentNumber])
+  @@index([email])
+  @@index([tenantId])
 }
 
 model Invoice {
-  id            String        @id @default(cuid())
+  id            String        @id
   tenantId      String
   bookingId     String
   invoiceNumber String
@@ -195,15 +68,125 @@ model Invoice {
   dueDate       DateTime?
   paidAt        DateTime?
   createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  updatedAt     DateTime
+  Booking       Booking       @relation(fields: [bookingId], references: [id])
+  Tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Restrict)
-
-  @@index([tenantId])
+  @@unique([tenantId, invoiceNumber])
   @@index([bookingId])
   @@index([invoiceNumber])
   @@index([status])
-  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+}
+
+model Item {
+  id          String     @id
+  tenantId    String
+  type        ItemType
+  name        String
+  description String?
+  basePrice   Float
+  status      ItemStatus @default(AVAILABLE)
+  attributes  Json?
+  photos      String[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  Booking     Booking[]
+  Tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([tenantId])
+  @@index([type])
+}
+
+model Tenant {
+  id            String         @id
+  name          String
+  subdomain     String         @unique
+  businessTypes BusinessType[]
+  location      String?
+  logo          String?
+  colors        Json?
+  config        Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime
+  Booking       Booking[]
+  Customer      Customer[]
+  Invoice       Invoice[]
+  Item          Item[]
+  User          User[]
+
+  @@index([subdomain])
+}
+
+model User {
+  id        String   @id
+  tenantId  String
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole
+  avatar    String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([tenantId])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum BusinessType {
+  SCOOTER_RENTAL
+  VEHICLE_RENTAL
+  PROPERTY_RENTAL
+  BOAT_RENTAL
+  EXPERIENCE_RENTAL
+  EQUIPMENT_RENTAL
+}
+
+enum DocumentType {
+  DNI
+  NIE
+  PASSPORT
+  DRIVING_LICENSE
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum ItemStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+  UNAVAILABLE
+}
+
+enum ItemType {
+  VEHICLE
+  PROPERTY
+  BOAT
+  EXPERIENCE
+  EQUIPMENT
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  ADMIN
+  OPERATOR
+  MECHANIC
 }
